@@ -1,0 +1,27 @@
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Local AI agent rules & workspace metadata (keep local-only)
+GEMINI.md
+.gemini/
+
+# Temporary voice synthesis build artifacts & Python environments
+.tmp_voice_build/
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.onnx
+*.bin
+*.pt
+*.pth
+
+# Editor & OS temp files
+*~
+*.swp
+*.swo
+.idea/
+.vscode/

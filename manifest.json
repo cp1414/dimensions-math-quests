@@ -1,0 +1,19 @@
+{
+  "name": "The Young Knight's Quest — Singapore Math Adventure",
+  "short_name": "Knight's Quest",
+  "description": "Complete Grade 1A & 1B Singapore Dimensions Math interactive homeschool and classroom adventure.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#14100C",
+  "theme_color": "#101E34",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
