@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#203E26" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self';" />
+  <title>Pip’s Meadow &amp; The Four Seasons Garden — Kindergarten Visual Math</title>
+  <link rel="manifest" href="../../manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="../../icon.svg" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- ==================== TOP GAME HEADER (Zero Emojis, No Scroll) ==================== -->
+  <header class="top-bar">
+    <button type="button" class="brand-cluster" id="btn-home-logo" title="Return to 3D Garden" aria-label="Return to 3D Garden">
+      <div class="crest-badge" id="header-crest-icon" aria-hidden="true"></div>
+      <h1 class="brand-main">The Four Seasons Garden</h1>
+    </button>
+
+    <div class="pip-banner">
+      <div class="pip-rank-icon" id="pip-rank-icon"></div>
+      <span class="pip-rank-label" id="pip-rank-title">Sprout Seeker</span>
+      <span class="pip-banner-sep" aria-hidden="true"></span>
+      <span class="pip-walks-tag"><strong id="mastered-count">0</strong> / 17 Walks</span>
+    </div>
+
+    <nav class="top-actions">
+      <a class="btn-header-quiet" href="../../index.html" id="btn-all-grades" title="Return to Grade Selection Home Hub">
+        <span>← All Grades</span>
+      </a>
+      <button class="btn-garden hidden" id="btn-map-view" type="button">
+        <span class="svg-icon" id="icon-map"></span>
+        <span>← 3D Garden</span>
+      </button>
+      <button class="btn-garden" id="btn-tabletop" type="button">
+        <span class="svg-icon" id="icon-blocks"></span>
+        <span>Garden Blocks</span>
+      </button>
+      <button class="btn-header-quiet" id="btn-placement" type="button" title="Parent Control: Jump to any of the 17 Garden Walks or Reset Progress">
+        <span class="svg-icon" id="icon-compass"></span>
+        <span>Walk Control</span>
+      </button>
+      <button class="btn-garden btn-icon-only" id="btn-sound-toggle" type="button" title="Toggle Gentle Chimes & Audio">
+        <span class="svg-icon" id="icon-speaker"></span>
+      </button>
+    </nav>
+  </header>
+
+  <!-- ==================== MAIN SINGLE-PAGE VIEWPORT (100VH LOCKED) ==================== -->
+  <main class="viewport-stage">
+
+    <!-- ==================== VIEW 1: TRUE 3D GUIDED FOUR SEASONS GARDEN ==================== -->
+    <section class="map-screen active" id="map-screen">
+      <div class="map-frame-border">
+        <div class="garden-3d-viewport">
+          <div id="garden-3d-canvas" class="garden-3d-canvas"></div>
+          <div id="svg-map-fallback" class="svg-map-fallback hidden"></div>
+
+          <!-- Projected 3D Lantern Plaque (tracks hovered/selected lantern smoothly) -->
+          <div id="garden-3d-marker" class="garden-3d-marker hidden" aria-hidden="true">
+            <span class="marker-unit">Autumn · Unit 1</span>
+            <strong class="marker-title">1. The Leaf-Sorting Hollow</strong>
+          </div>
+
+          <!-- Parent-Clicked Guided Season Bookmarks (Pip & Camera walk automatically) -->
+          <div class="season-bookmarks" role="navigation" aria-label="Jump to Season">
+            <button type="button" class="season-tab active" data-season-node="1">I. Autumn</button>
+            <button type="button" class="season-tab" data-season-node="4">II. Winter</button>
+            <button type="button" class="season-tab" data-season-node="7">III. Spring</button>
+            <button type="button" class="season-tab" data-season-node="13">IV. Summer</button>
+          </div>
+
+          <div class="garden-hint-caption">
+            Drag 360° to look around · Click any Lantern or Season to walk Pip
+          </div>
+        </div>
+
+        <div class="map-bottom-dock">
+          <div class="dock-step-controls">
+            <button type="button" class="btn-dock-step" id="btn-prev-walk" title="Walk Pip to Previous Lantern">← Prev</button>
+            <button type="button" class="btn-dock-step" id="btn-next-walk" title="Walk Pip to Next Lantern">Next →</button>
+          </div>
+
+          <div class="dock-node-badge" id="dock-node-icon"></div>
+          <div class="dock-node-info">
+            <span class="dock-season-tag" id="dock-season-tag">Autumn · Unit 1</span>
+            <h2 class="dock-node-title" id="dock-node-title">1. The Leaf-Sorting Hollow</h2>
+            <p class="dock-node-desc" id="dock-node-desc">Match and sort autumn leaves by shape, color, and kind.</p>
+          </div>
+          <button class="btn-meadow-primary" id="btn-enter-node" type="button">
+            <span id="btn-enter-node-label">Start Walk →</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 2: GARDEN WALK STUDIO (Split-Screen with Parent Guide) ==================== -->
+    <section class="studio-screen" id="studio-screen">
+      <div class="page-sheet" id="studio-main-sheet">
+
+        <div class="sheet-top-bar">
+          <div class="sheet-left-group">
+            <div class="sheet-title-stack">
+              <span class="sheet-unit-tag" id="studio-unit-tag">Autumn · Unit 1</span>
+              <h2 class="sheet-level-title" id="studio-node-name">1. The Leaf-Sorting Hollow</h2>
+            </div>
+          </div>
+
+          <div class="acorns-progress-cluster" id="acorns-progress-cluster" title="Earn 4 Golden Acorns per Walk (3 Stars to Master)">
+            <div class="acorns-row" id="acorns-row"></div>
+          </div>
+
+          <div class="sheet-right-group">
+            <div class="mode-tab-switch">
+              <button class="mode-tab active" data-mode="learn" id="tab-learn" type="button">Lesson</button>
+              <button class="mode-tab" data-mode="trial" id="tab-trial" type="button">Play &amp; Practice</button>
+            </div>
+            <button class="btn-parent-drawer" id="btn-open-parent-guide" type="button" title="Toggle Parent Teaching Sidebar">
+              <span class="svg-icon" id="icon-scroll"></span>
+              <span id="parent-guide-btn-label">Parent Guide</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="owl-banner" id="owl-banner" aria-live="polite" aria-atomic="true">
+          <div class="owl-portrait" id="owl-portrait-holder" title="Professor Barnaby Owl" aria-hidden="true"></div>
+          <div class="owl-speech-content">
+            <div class="owl-step-tag" id="owl-step-tag">Concrete Exploration · Step 1 of 3</div>
+            <p class="owl-prompt-text" id="owl-prompt-text">Look at the garden baskets together!</p>
+          </div>
+          <button class="btn-owl-chime" id="btn-replay-chime" type="button" title="Play gentle garden chime">
+            <span class="svg-icon" id="icon-chime"></span>
+            <span>Listen</span>
+          </button>
+        </div>
+
+        <div class="sheet-center-stage">
+          <div class="visual-math-stage" id="main-visual-stage" role="region" aria-label="Visual Math Diagram"></div>
+          <div class="equation-banner" id="main-equation-banner" aria-live="polite" aria-atomic="true">How many?</div>
+        </div>
+
+        <div class="sheet-bottom-bar">
+          <div class="lesson-nav-bar" id="lesson-nav-bar">
+            <button class="btn-garden btn-lg-nav" id="btn-learn-prev" type="button">← Back</button>
+            <div class="lesson-center-cluster">
+              <div class="learn-check-bar hidden" id="learn-check-bar">
+                <span class="learn-check-label" id="learn-check-label">Try It Together:</span>
+                <div class="learn-check-choices" id="learn-check-choices"></div>
+              </div>
+              <div class="learn-step-dots" id="learn-step-dots"></div>
+            </div>
+            <button class="btn-meadow-primary btn-lg-nav" id="btn-learn-next" type="button">Next →</button>
+          </div>
+
+          <div class="play-interaction-bar hidden" id="play-interaction-bar">
+            <div class="answer-choices-grid" id="answer-choices-grid"></div>
+            <div class="parent-corner-controls">
+              <button class="btn-parent-mini" id="btn-toggle-visual-hint" type="button">
+                <span id="visual-toggle-text">Hide Picture</span>
+              </button>
+              <button class="btn-parent-mini" id="btn-grade-fluent" type="button" title="Child answered aloud right away">
+                ✓ Answered Aloud
+              </button>
+              <button class="btn-parent-mini" id="btn-new-problem" type="button" title="Deal another problem">
+                ↻ Next
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <aside class="parent-guide-sidebar collapsed" id="parent-guide-modal" aria-label="Parent Teaching Guide Sidebar">
+        <div class="parent-sidebar-inner">
+          <div class="sidebar-header-row">
+            <div>
+              <span class="parent-tag">PARENT &amp; TEACHER · LIVE GUIDE</span>
+              <h2 id="pg-level-title">Teaching Guide</h2>
+            </div>
+            <button class="btn-close-modal" id="btn-close-parent-guide" type="button" aria-label="Close Teaching Sidebar">✕</button>
+          </div>
+
+          <div class="pg-live-coach-box">
+            <div class="pg-live-badge" id="pg-live-badge">LIVE ON SCREEN NOW</div>
+            <p id="pg-live-coach-text">Explore the picture together slowly, letting your child point and speak before tapping.</p>
+          </div>
+
+          <div class="pg-difficulty-row">
+            <span class="pg-tier-label">Difficulty Tier:</span>
+            <div class="pg-tier-buttons">
+              <button class="tier-pip active" data-tier="1" type="button">Tier 1 · Gentle</button>
+              <button class="tier-pip" data-tier="2" type="button">Tier 2 · Standard</button>
+              <button class="tier-pip" data-tier="3" type="button">Tier 3 · Challenge</button>
+            </div>
+          </div>
+
+          <div class="pg-grid">
+            <div class="pg-box pg-box-highlight">
+              <h4>Say Together (Socratic Script)</h4>
+              <p id="teacher-script-text"></p>
+            </div>
+            <div class="pg-box">
+              <h4>Classical Christian Wonder &amp; Living Books</h4>
+              <p id="teacher-wonder-text"></p>
+            </div>
+            <div class="pg-box">
+              <h4>Visual &amp; Mental Math Focus</h4>
+              <p id="teacher-heuristic-text"></p>
+            </div>
+            <div class="pg-box">
+              <h4>Hands-On Tabletop Activity</h4>
+              <p id="teacher-hands-on-text"></p>
+            </div>
+          </div>
+
+          <div class="pg-footer">
+            <button class="btn-garden btn-sm-full" id="btn-open-node-tabletop" type="button">Open in Garden Blocks →</button>
+            <button class="btn-meadow-primary btn-sm-full" id="btn-force-mastery" type="button">Complete Walk &amp; Continue →</button>
+            <button class="btn-parent-danger btn-sm-full" id="btn-reset-level" type="button">Restart This Walk</button>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <!-- ==================== VIEW 3: GARDEN BLOCKS MANIPULATIVE MAT ==================== -->
+    <section class="tabletop-screen" id="tabletop-screen">
+      <div class="page-sheet tabletop-sheet">
+        <div class="sheet-top-bar tabletop-top-bar">
+          <button class="btn-back-map" id="btn-close-tabletop" type="button">← Back</button>
+          <div class="tabletop-tool-tabs" id="tabletop-tool-tabs">
+            <button class="tool-tab active" data-tool="frames" type="button">1. 5 &amp; 10 Frames <span class="tt-ch">Units 2–3, 7</span></button>
+            <button class="tool-tab" data-tool="bonds" type="button">2. Number Bonds <span class="tt-ch">Unit 8</span></button>
+            <button class="tool-tab" data-tool="addsub" type="button">3. Add &amp; Take Away <span class="tt-ch">Units 9–11</span></button>
+            <button class="tool-tab" data-tool="shapespat" type="button">4. Shapes &amp; Patterns <span class="tt-ch">Units 1, 4</span></button>
+            <button class="tool-tab" data-tool="balance" type="button">5. Balance &amp; Length <span class="tt-ch">Units 5–6</span></button>
+            <button class="tool-tab" data-tool="timecoins" type="button">6. 100s, Clock &amp; Coins <span class="tt-ch">Units 12–14</span></button>
+          </div>
+          <div class="mode-tab-switch">
+            <button class="mode-tab active" id="tt-mode-explore" type="button">Explore &amp; Teach</button>
+            <button class="mode-tab" id="tt-mode-quiz" type="button">Practice &amp; Quiz Me</button>
+          </div>
+        </div>
+        <div class="tabletop-workspace" id="tabletop-workspace"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================== MODAL: WALK COMPLETE ==================== -->
+  <dialog class="modal-backdrop hidden" id="victory-modal" aria-labelledby="victory-node-title">
+    <div class="modal-parchment victory-card">
+      <div class="wax-seal-large" id="victory-seal-svg" aria-hidden="true"></div>
+      <div class="victory-stars-row" id="victory-stars-row"></div>
+      <h2 class="victory-title" id="victory-node-title">Garden Walk Complete!</h2>
+      <p class="victory-message" id="victory-message">
+        “Well done, little Pip! You gathered all 4 Golden Acorns. Let us stroll onward down the meadow path!”
+      </p>
+      <div class="victory-actions">
+        <button class="btn-garden" id="btn-stay-practice" type="button">Play Again (Next Star)</button>
+        <button class="btn-meadow-primary btn-lg" id="btn-march-onward" type="button">
+          <span>Walk Onward →</span>
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- ==================== MODAL: WALK CONTROL (ALL 17 WALKS) ==================== -->
+  <dialog class="modal-backdrop hidden" id="placement-modal" aria-labelledby="placement-modal-title">
+    <div class="modal-parchment placement-card">
+      <div class="modal-header-row">
+        <div>
+          <span class="parent-tag">GARDEN WALK CONTROL</span>
+          <h2 id="placement-modal-title">All 17 Kindergarten Garden Walks (Semester A &amp; B)</h2>
+        </div>
+        <button class="btn-close-modal" id="btn-close-placement" type="button" aria-label="Close Walk Control">✕</button>
+      </div>
+      <div class="placement-controls-row">
+        <button class="btn-garden" id="btn-unlock-all" type="button">Unlock All 17 Walks</button>
+        <button class="btn-parent-danger" id="btn-reset-progress" type="button">Full Reset (Walk 1)</button>
+      </div>
+      <div class="placement-grid" id="placement-grid"></div>
+    </div>
+  </dialog>
+
+  <script defer src="../../shared/vendor/three/three.min.js"></script>
+  <script defer src="../../shared/audio-engine.js"></script>
+  <script defer src="../../shared/cpa-primitives.js"></script>
+  <script defer src="curriculum.js"></script>
+  <script defer src="visuals.js"></script>
+  <script defer src="garden3d.js?v=8"></script>
+  <script defer src="app.js?v=7"></script>
+</body>
+</html>

@@ -3,288 +3,79 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#101E34" />
+  <meta name="theme-color" content="#1A1510" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <title>The Young Knight's Quest — Grade 1 Visual &amp; Mental Math Adventure</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self';" />
+  <title>Hearth &amp; Wonder Math — Classical Homeschool Library</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="hub.css" />
 </head>
 <body>
-  <!-- ==================== TOP GAME HEADER (Compact, Zero Emojis) ==================== -->
-  <header class="top-bar">
-    <button type="button" class="brand-cluster" id="btn-home-logo" title="Return to Kingdom Map" aria-label="Return to Kingdom Map">
-      <div class="crest-badge" id="header-crest-icon" aria-hidden="true"></div>
-      <h1 class="brand-main">The Young Knight’s Quest</h1>
-    </button>
-
-    <div class="squire-banner">
-      <div class="squire-rank-icon" id="squire-rank-icon"></div>
-      <span class="squire-rank-label" id="squire-rank-title">Woodland Page</span>
-      <span class="squire-banner-sep" aria-hidden="true"></span>
-      <span class="squire-missions-tag"><strong id="mastered-count">0</strong> / 23 Missions</span>
+  <header class="hub-top-bar">
+    <div class="hub-brand">
+      <div class="hub-crest" id="hub-crest-icon" aria-hidden="true"></div>
+      <div>
+        <h1 class="hub-title">Hearth &amp; Wonder Math</h1>
+        <p class="hub-subtitle">Classical Visual &amp; Mental Math · Local &amp; Offline</p>
+      </div>
     </div>
 
-    <nav class="top-actions">
-      <button class="btn-vellum hidden" id="btn-map-view">
-        <span class="svg-icon" id="icon-map"></span>
-        <span>← Kingdom Map</span>
-      </button>
-      <button class="btn-vellum" id="btn-tabletop">
-        <span class="svg-icon" id="icon-abacus"></span>
-        <span>Math Blocks</span>
-      </button>
-      <button class="btn-header-quiet" id="btn-placement" title="Parent Control: Jump to any of the 23 Missions or Reset Progress">
-        <span class="svg-icon" id="icon-crown"></span>
-        <span>Mission Control</span>
-      </button>
-      <button class="btn-vellum btn-icon-only" id="btn-sound-toggle" title="Toggle Master Aldous Voice & Chimes">
-        <span class="svg-icon" id="icon-speaker"></span>
-      </button>
-    </nav>
+    <div class="hub-top-actions">
+      <button type="button" class="hub-btn-brass" id="btn-hub-about">For Parents: How It Works</button>
+    </div>
   </header>
 
-  <!-- ==================== MAIN SINGLE-PAGE VIEWPORT (NO SCROLLING) ==================== -->
-  <main class="viewport-stage">
-
-    <!-- ==================== VIEW 1: KINGDOM OVERWORLD MAP ==================== -->
-    <section class="map-screen active" id="map-screen">
-      <div class="map-frame-border">
-        <div class="map-canvas-wrapper">
-          <div class="map-zoom-layer" id="map-zoom-layer">
-            <div id="svg-map-container"></div>
-            <div id="map-nodes-overlay" class="map-nodes-overlay"></div>
-            <div id="squire-map-token" class="squire-map-token">
-              <div class="squire-token-halo"></div>
-              <div class="squire-token-figure" id="squire-svg-holder"></div>
-            </div>
-          </div>
-
-        </div>
-
-        <!-- Bottom Selected Level Bar -->
-        <div class="map-bottom-dock">
-          <div class="dock-node-badge" id="dock-node-icon"></div>
-          <div class="dock-node-info">
-            <span class="dock-act-tag" id="dock-act-tag">Act I · Forest of Ten</span>
-            <h2 class="dock-node-title" id="dock-node-title">1. The Apple Orchard</h2>
-            <p class="dock-node-desc" id="dock-node-desc">See how two smaller Parts join to make one Whole basket of apples.</p>
-          </div>
-          <button class="btn-royal-primary" id="btn-enter-node">
-            <span id="btn-enter-node-label">Start Level →</span>
-          </button>
-        </div>
+  <main class="hub-stage">
+    <section class="hub-intro" aria-label="Choose a grade level">
+      <div class="hub-kicker-rule">
+        <span class="rule-line"></span>
+        <span class="hub-kicker">CLASSICAL HOMESCHOOL STUDY</span>
+        <span class="rule-line"></span>
       </div>
+      <h2>Choose a Volume to Open</h2>
+      <p>Select your child’s grade to step directly into their self-contained world, manipulatives, and live Parent Guide.</p>
     </section>
 
-    <!-- ==================== VIEW 2: SINGLE-PAGE LEVEL WORKSPACE (Dynamic Split-Screen with Parent Sidebar) ==================== -->
-    <section class="studio-screen" id="studio-screen">
-      <div class="page-sheet" id="studio-main-sheet">
+    <section class="hub-grid" id="hub-grade-grid" aria-label="Grade Volumes"></section>
 
-        <!-- Row 1: Clean Game Top Bar inside the Page -->
-        <div class="sheet-top-bar">
-          <div class="sheet-left-group">
-            <div class="sheet-title-stack">
-              <span class="sheet-chapter-pill" id="studio-chapter-tag">Act I · Unit 1</span>
-              <h2 class="sheet-level-title" id="studio-node-name">1. Scout the Bandit Camp</h2>
-            </div>
-          </div>
-
-          <!-- Thematic 5-Shield Progress Meter + 3-Star Unit Mastery -->
-          <div class="shields-progress-cluster" id="shields-progress-cluster" title="Earn 5 Strikes per Quest (3 Quests to Master the Unit)">
-            <div class="shields-row" id="shields-row"></div>
-          </div>
-
-          <!-- Simple 2-Tab Mode Switch + Dynamic Right Sidebar Toggle Button -->
-          <div class="sheet-right-group">
-            <div class="mode-tab-switch">
-              <button class="mode-tab active" data-mode="learn" id="tab-learn">Lesson</button>
-              <button class="mode-tab" data-mode="trial" id="tab-trial">Play &amp; Practice</button>
-            </div>
-            <button class="btn-parent-drawer" id="btn-open-parent-guide" title="Toggle Right-Hand Parent Teaching Sidebar (Keeps Screen Visible)">
-              <span class="svg-icon" id="icon-scroll"></span>
-              <span id="parent-guide-btn-label">Parent Guide</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Row 2: Master Aldous (Merlin-Style Tutor) Speech Banner -->
-        <div class="merlin-banner" id="merlin-banner" aria-live="polite" aria-atomic="true">
-          <div class="merlin-portrait" id="merlin-portrait-holder" title="Master Aldous, Royal Tutor" aria-hidden="true"></div>
-          <div class="merlin-speech-content">
-            <div class="merlin-step-tag" id="merlin-step-tag">Creation &amp; Order · Step 1 of 5</div>
-            <p class="merlin-prompt-text" id="merlin-prompt-text">
-              3 red apples and 4 golden apples. What is the Whole?
-            </p>
-          </div>
-          <button class="btn-aldous-replay" id="btn-replay-voice" type="button" title="Hear Master Aldous speak this hint aloud" aria-label="Hear Master Aldous speak this hint aloud">
-            <span class="svg-icon" id="icon-replay-voice"></span>
-            <span id="replay-voice-label">Hear Hint</span>
-          </button>
-        </div>
-
-        <!-- Row 3: Center Visual Math Stage + Big Equation -->
-        <div class="sheet-center-stage">
-          <div class="visual-math-stage" id="main-visual-stage" role="region" aria-label="Visual Math Diagram"></div>
-          <div class="equation-banner" id="main-equation-banner" aria-live="polite" aria-atomic="true">3 + 4 = ?</div>
-        </div>
-
-        <!-- Row 4: Bottom Interaction Bar (Swaps cleanly between Lesson Nav / Guided Check & Big Answer Tiles) -->
-        <div class="sheet-bottom-bar">
-          <!-- Lesson Controls (Shown in Lesson Mode) -->
-          <div class="lesson-nav-bar" id="lesson-nav-bar">
-            <button class="btn-vellum btn-lg-nav" id="btn-learn-prev">← Back</button>
-            <div class="lesson-center-cluster">
-              <div class="learn-check-bar hidden" id="learn-check-bar">
-                <span class="learn-check-label" id="learn-check-label">Try It Together:</span>
-                <div class="learn-check-choices" id="learn-check-choices"></div>
-              </div>
-              <div class="learn-step-dots" id="learn-step-dots"></div>
-            </div>
-            <button class="btn-royal-primary btn-lg-nav" id="btn-learn-next">Next →</button>
-          </div>
-
-          <!-- Play Controls: Big Child Answer Tiles + Quiet Parent Corner (Shown in Play Mode) -->
-          <div class="play-interaction-bar hidden" id="play-interaction-bar">
-            <div class="answer-choices-grid" id="answer-choices-grid"></div>
-
-            <div class="parent-corner-controls">
-              <button class="btn-parent-mini" id="btn-toggle-visual-hint" title="Show or hide the picture">
-                <span id="visual-toggle-text">Hide Picture</span>
-              </button>
-              <button class="btn-parent-mini" id="btn-grade-fluent" title="Parent Shortcut: He answered aloud right away!">
-                ✓ Answered Aloud
-              </button>
-              <button class="btn-parent-mini" id="btn-new-problem" title="New problem">
-                ↻ Next
-              </button>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- ==================== DYNAMIC RIGHT SIDEBAR: PARENT TEACHING GUIDE (Shrinks Left Sheet, Zero Modal Overlay) ==================== -->
-      <aside class="parent-guide-sidebar collapsed" id="parent-guide-modal" aria-label="Parent Teaching Guide Sidebar">
-        <div class="parent-sidebar-inner">
-          <div class="sidebar-header-row">
-            <div>
-              <span class="parent-tag">TEACHER &amp; PARENT · LIVE TEACHING GUIDE</span>
-              <h2 id="pg-level-title">Teaching Guide</h2>
-            </div>
-            <button class="btn-close-modal" id="btn-close-parent-guide" title="Close Teaching Sidebar">✕</button>
-          </div>
-
-          <!-- Live Context Box: Updates automatically as you step through the lesson or solve problems on the left! -->
-          <div class="pg-live-coach-box" id="pg-live-coach-box">
-            <div class="pg-live-badge" id="pg-live-badge">LIVE ON SCREEN NOW</div>
-            <p id="pg-live-coach-text">Walk through the Concrete-Pictorial-Abstract lesson stages together, then launch Play &amp; Practice.</p>
-          </div>
-
-          <div class="pg-difficulty-row">
-            <span class="pg-tier-label">Difficulty Tier:</span>
-            <div class="pg-tier-buttons">
-              <button class="tier-pip active" data-tier="1">Tier 1 · Concrete</button>
-              <button class="tier-pip" data-tier="2">Tier 2 · Standard</button>
-              <button class="tier-pip" data-tier="3">Tier 3 · Mental</button>
-            </div>
-          </div>
-
-          <div class="pg-grid">
-            <div class="pg-box pg-box-highlight">
-              <h4>Say Together (Socratic Script)</h4>
-              <p id="teacher-script-text"></p>
-            </div>
-            <div class="pg-box">
-              <h4>Classical Christian Wonder &amp; Order</h4>
-              <p id="teacher-wonder-text"></p>
-            </div>
-            <div class="pg-box">
-              <h4>Visual &amp; Mental Math Strategy</h4>
-              <p id="teacher-heuristic-text"></p>
-            </div>
-            <div class="pg-box">
-              <h4>Hands-On Tabletop Activity</h4>
-              <p id="teacher-hands-on-text"></p>
-            </div>
-          </div>
-
-          <div class="pg-footer" style="display:flex;flex-direction:column;gap:6px;">
-            <button class="btn-vellum btn-sm-full" id="btn-open-node-tabletop">Open This Topic in Math Blocks →</button>
-            <button class="btn-royal-primary btn-sm-full" id="btn-force-mastery">Complete Quest &amp; March to Next →</button>
-            <button class="btn-parent-danger btn-sm-full" id="btn-reset-level" title="Restart this mission from Step 1 without affecting other missions">
-              <span class="svg-icon" id="icon-reset-level"></span>
-              <span id="reset-level-label">Restart This Mission</span>
-            </button>
-          </div>
-        </div>
-      </aside>
-    </section>
-
-    <!-- ==================== VIEW 3: INTERACTIVE MATH BLOCKS WORKSHOP & PRACTICE MAT ==================== -->
-    <section class="tabletop-screen" id="tabletop-screen">
-      <div class="page-sheet tabletop-sheet">
-        <div class="sheet-top-bar tabletop-top-bar">
-          <button class="btn-back-map" id="btn-close-tabletop">← Back</button>
-          <div class="tabletop-tool-tabs" id="tabletop-tool-tabs">
-            <button class="tool-tab active" data-tool="bonds10">1. Bonds to 10 <span class="tt-ch">Units 1–4</span></button>
-            <button class="tool-tab" data-tool="maketen">2. Make-10 Bridge <span class="tt-ch">Units 5–7</span></button>
-            <button class="tool-tab" data-tool="shapeslen">3. Shapes &amp; Length <span class="tt-ch">Units 8–10</span></button>
-            <button class="tool-tab" data-tool="barmodel">4. Bar Models <span class="tt-ch">Units 11,13,17</span></button>
-            <button class="tool-tab" data-tool="placevalue">5. Tens &amp; Regroup <span class="tt-ch">Units 12–17</span></button>
-            <button class="tool-tab" data-tool="groupsfrac">6. Groups &amp; Halves <span class="tt-ch">Units 14–15</span></button>
-            <button class="tool-tab" data-tool="clockcoins">7. Clock &amp; Coins <span class="tt-ch">Units 18–19</span></button>
-          </div>
-          <div class="mode-tab-switch">
-            <button class="mode-tab active" id="tt-mode-explore">Explore &amp; Teach</button>
-            <button class="mode-tab" id="tt-mode-quiz">Practice &amp; Quiz Me</button>
-          </div>
-        </div>
-        <div class="tabletop-workspace" id="tabletop-workspace"></div>
-      </div>
-    </section>
-
+    <footer class="hub-footer">
+      <span>100% Private Client-Side · Zero Tracking · Progress Saved Locally per Grade · Concrete → Pictorial → Abstract</span>
+    </footer>
   </main>
 
-  <!-- ==================== MODAL: LEVEL COMPLETE & MAP MARCH (Native <dialog>) ==================== -->
-  <dialog class="modal-backdrop hidden" id="victory-modal" aria-labelledby="victory-node-title">
-    <div class="modal-parchment victory-card">
-      <div class="wax-seal-large" id="victory-seal-svg" aria-hidden="true"></div>
-      <div class="victory-stars-row" id="victory-stars-row"></div>
-      <h2 class="victory-title" id="victory-node-title">Level Complete!</h2>
-      <p class="victory-message" id="victory-message">
-        “Well done, young Squire! You have earned all 5 Golden Shields. Let us march onward along the King’s Highway!”
-      </p>
-      <div class="victory-actions">
-        <button class="btn-vellum" id="btn-stay-practice">Play Again (Next Star)</button>
-        <button class="btn-royal-primary btn-lg" id="btn-march-onward">
-          <span>March Onward →</span>
-        </button>
-      </div>
-    </div>
-  </dialog>
-
-  <!-- ==================== MODAL: MISSION CONTROL (Native <dialog>) ==================== -->
-  <dialog class="modal-backdrop hidden" id="placement-modal" aria-labelledby="placement-modal-title">
-    <div class="modal-parchment placement-card">
-      <div class="modal-header-row">
+  <dialog class="hub-dialog hidden" id="hub-about-dialog" aria-labelledby="hub-about-title">
+    <div class="hub-dialog-card">
+      <div class="hub-dialog-head">
         <div>
-          <span class="parent-tag">MISSION CONTROL</span>
-          <h2 id="placement-modal-title">All 23 Grade 1 Missions (Complete Visual &amp; Mental Math Curriculum)</h2>
+          <span class="hub-dialog-kicker">PARENT &amp; TEACHER ORIENTATION</span>
+          <h2 id="hub-about-title">Calm, Focused Mathematical Order</h2>
         </div>
-        <button class="btn-close-modal" id="btn-close-placement" aria-label="Close Mission Control">✕</button>
+        <button type="button" class="hub-close-btn" id="btn-close-about" aria-label="Close">✕</button>
       </div>
-      <div class="placement-controls-row">
-        <button class="btn-vellum" id="btn-unlock-all">Complete All 23 Missions</button>
-        <button class="btn-parent-danger" id="btn-reset-progress">Full Reset (Mission 1)</button>
+      <div class="hub-about-grid">
+        <div class="hub-about-box">
+          <h3>Matches Your Math Spine</h3>
+          <p>Every grade follows a clean <strong>Semester A &amp; Semester B</strong> sequence built around Concrete–Pictorial–Abstract models (Five-Frames, Ten-Frames, Number Bonds, Bar Models, Place Value, Time, and Coins).</p>
+        </div>
+        <div class="hub-about-box">
+          <h3>Designed for Young Eyes</h3>
+          <p>Each grade opens its own single-screen, zero-scroll world. In Kindergarten, parents click a season or lantern and Pip walks through the 3D garden automatically—no complicated steering.</p>
+        </div>
+        <div class="hub-about-box">
+          <h3>Private &amp; Offline Forever</h3>
+          <p>No logins, no subscriptions, no trackers, and no external CDNs. Each grade preserves its own progress locally in your browser.</p>
+        </div>
+        <div class="hub-about-box">
+          <h3>Live Parent Guide Inside</h3>
+          <p>Toggle the split-screen <strong>Parent Guide</strong> inside any unit for word-for-word Socratic prompts, Classical Christian wonder notes, living-book pairings, and tabletop ideas.</p>
+        </div>
       </div>
-      <div class="placement-grid" id="placement-grid"></div>
     </div>
   </dialog>
 
-  <script defer src="curriculum.js"></script>
-  <script defer src="visuals.js"></script>
-  <script defer src="app.js"></script>
+  <script defer src="shared/grades-registry.js"></script>
+  <script defer src="hub.js"></script>
 </body>
 </html>

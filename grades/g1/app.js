@@ -97,7 +97,17 @@ const App = {
   registerServiceWorker() {
     try {
       if (typeof navigator !== "undefined" && "serviceWorker" in navigator && window.location && window.location.protocol.startsWith("http")) {
-        navigator.serviceWorker.register("./sw.js").catch(() => {});
+        const hadController = !!navigator.serviceWorker.controller;
+        let reloaded = false;
+        navigator.serviceWorker.addEventListener("controllerchange", () => {
+          if (hadController && !reloaded) {
+            reloaded = true;
+            window.location.reload();
+          }
+        });
+        navigator.serviceWorker.register("../../sw.js", { scope: "../../", updateViaCache: "none" })
+          .then((reg) => reg && reg.update && reg.update().catch(() => {}))
+          .catch(() => {});
       }
     } catch (e) {}
   },

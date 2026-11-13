@@ -1,0 +1,409 @@
+:root {
+  --study-dark: #16120D;
+  --study-oak: #271E15;
+  --vellum: #FAF4E6;
+  --vellum-warm: #EFE5CF;
+  --vellum-edge: #BBA67B;
+  --ink-deep: #1E1812;
+  --ink-mid: #4B3E30;
+  --brass: #C8962E;
+  --brass-bright: #E8C05A;
+  --forest: #245633;
+  --navy: #173156;
+  --font-display: 'Palatino Linotype', 'Book Antiqua', Palatino, Georgia, serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 50% 16%, rgba(232, 192, 90, 0.16) 0%, transparent 56%),
+    radial-gradient(circle at 18% 82%, rgba(36, 86, 51, 0.22) 0%, transparent 45%),
+    linear-gradient(165deg, var(--study-oak) 0%, var(--study-dark) 100%);
+  color: var(--ink-deep);
+  font-family: var(--font-display);
+  display: flex;
+  flex-direction: column;
+  user-select: none;
+}
+
+:focus-visible {
+  outline: 3px solid var(--brass-bright);
+  outline-offset: 2px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.hub-top-bar {
+  height: 62px;
+  flex-shrink: 0;
+  padding: 0 26px;
+  background: rgba(18, 14, 10, 0.88);
+  border-bottom: 2px solid rgba(200, 150, 46, 0.48);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.hub-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hub-crest {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hub-title {
+  font-size: 20px;
+  color: var(--vellum);
+  letter-spacing: 0.03em;
+  line-height: 1.1;
+}
+
+.hub-subtitle {
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  color: #C7B99D;
+  letter-spacing: 0.02em;
+  margin-top: 2px;
+}
+
+.hub-btn-brass {
+  background: linear-gradient(180deg, #3A2E20 0%, #261D14 100%);
+  color: var(--vellum);
+  border: 1.5px solid var(--brass);
+  border-radius: 6px;
+  padding: 8px 15px;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.14s ease, background 0.14s ease;
+}
+
+.hub-btn-brass:hover {
+  border-color: var(--brass-bright);
+  background: linear-gradient(180deg, #4A3B28 0%, #302519 100%);
+}
+
+.hub-stage {
+  flex: 1;
+  min-height: 0;
+  padding: 20px 30px 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+  max-width: 1320px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.hub-intro {
+  text-align: center;
+  color: var(--vellum);
+}
+
+.hub-kicker-rule {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.rule-line {
+  width: 58px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--brass), transparent);
+}
+
+.hub-kicker {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  color: var(--brass-bright);
+}
+
+.hub-intro h2 {
+  font-size: clamp(23px, 2.8vw, 31px);
+  color: #FFFDF8;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.hub-intro p {
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  color: #D5C9B2;
+}
+
+/* ==================== ILLUMINATED FOLIO VOLUMES ==================== */
+.hub-grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
+  align-items: stretch;
+}
+
+.folio-card {
+  position: relative;
+  background:
+    radial-gradient(circle at 85% 15%, rgba(255, 255, 255, 0.7) 0%, transparent 55%),
+    linear-gradient(160deg, #FDF9EE 0%, #EFE4CC 100%);
+  border: 2px solid var(--vellum-edge);
+  border-left: 12px solid var(--folio-accent, var(--forest));
+  border-radius: 6px 14px 14px 6px;
+  padding: 28px 20px 16px 22px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--ink-deep);
+  box-shadow:
+    inset 4px 0 10px rgba(30, 24, 18, 0.12),
+    inset 0 0 0 1px rgba(200, 150, 46, 0.32),
+    0 16px 34px rgba(0, 0, 0, 0.45);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.folio-card:not(.coming-soon):hover {
+  transform: translateY(-5px);
+  border-color: var(--brass-bright);
+  box-shadow:
+    inset 4px 0 10px rgba(30, 24, 18, 0.12),
+    inset 0 0 0 1.5px var(--brass),
+    0 22px 42px rgba(0, 0, 0, 0.56);
+}
+
+.folio-card.coming-soon {
+  background: linear-gradient(160deg, #EAE2D1 0%, #DDD2BC 100%);
+  opacity: 0.84;
+}
+
+.folio-ribbon {
+  position: absolute;
+  top: -2px;
+  right: 22px;
+  background: var(--folio-accent, var(--forest));
+  color: #FFFDF8;
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 6px 11px 11px;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 78%, 0 100%);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.25);
+}
+
+.folio-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding-right: 106px;
+}
+
+.folio-emblem {
+  width: 58px;
+  height: 58px;
+  border-radius: 8px;
+  background: #FFFDF7;
+  border: 1.5px solid #C8B48B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.folio-title {
+  font-size: clamp(19px, 1.95vw, 23px);
+  line-height: 1.18;
+  color: var(--ink-deep);
+}
+
+.folio-subtitle {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 13.5px;
+  color: var(--ink-mid);
+  margin-top: 3px;
+}
+
+.folio-desc {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.46;
+  color: var(--ink-mid);
+}
+
+.folio-scope {
+  border-top: 1px solid #D3C3A3;
+  border-bottom: 1px solid #D3C3A3;
+  padding: 8px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  color: var(--ink-mid);
+}
+
+.folio-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.folio-progress {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-mid);
+  letter-spacing: 0.01em;
+}
+
+.folio-progress strong {
+  color: var(--ink-deep);
+}
+
+.folio-cta {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 800;
+  color: #FFFDF8;
+  padding: 9px 14px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  border-radius: 6px;
+  border: 1.5px solid rgba(0, 0, 0, 0.25);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.28);
+}
+
+.folio-cta.disabled {
+  background: #7A7061;
+  box-shadow: none;
+}
+
+.hub-footer {
+  text-align: center;
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  color: #BFB298;
+  letter-spacing: 0.02em;
+}
+
+.hub-dialog {
+  margin: auto;
+  border: none;
+  background: transparent;
+  max-width: 720px;
+  width: 92vw;
+}
+
+.hub-dialog::backdrop {
+  background: rgba(12, 10, 8, 0.76);
+  backdrop-filter: blur(3px);
+}
+
+.hub-dialog-card {
+  background: var(--vellum);
+  border: 3px solid var(--brass);
+  border-radius: 10px;
+  padding: 22px;
+  color: var(--ink-deep);
+}
+
+.hub-dialog-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1.5px solid #D3C3A3;
+}
+
+.hub-dialog-kicker {
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: var(--forest);
+}
+
+.hub-close-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1.5px solid var(--vellum-edge);
+  background: #FFFDF8;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.hub-about-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.hub-about-box {
+  background: #FFFDF8;
+  border: 1.5px solid #D6C7A9;
+  border-radius: 6px;
+  padding: 12px 14px;
+}
+
+.hub-about-box h3 {
+  font-size: 15.5px;
+  margin-bottom: 4px;
+  color: var(--forest);
+}
+
+.hub-about-box p {
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  line-height: 1.46;
+  color: var(--ink-mid);
+}
+
+@media (max-width: 960px) {
+  .hub-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .folio-card.coming-soon {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .folio-card, .hub-btn-brass {
+    transition: none !important;
+  }
+}

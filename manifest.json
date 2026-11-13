@@ -1,13 +1,13 @@
 {
-  "name": "The Young Knight's Quest — Grade 1 Visual & Mental Math Adventure",
-  "short_name": "Knight's Quest",
-  "description": "Complete Grade 1 Visual & Mental Math interactive homeschool and classroom adventure.",
+  "name": "Hearth & Wonder Math — Multi-Grade Homeschool Suite",
+  "short_name": "Wonder Math",
+  "description": "Classical Christian Visual & Mental Math adventures for Kindergarten, Grade 1, and beyond.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "landscape",
-  "background_color": "#14100C",
-  "theme_color": "#101E34",
+  "background_color": "#17231A",
+  "theme_color": "#17231A",
   "icons": [
     {
       "src": "icon.svg",
