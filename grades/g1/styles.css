@@ -251,9 +251,9 @@ html, body {
   flex-direction: column;
   border: 3.5px solid var(--gold-burnished);
   border-radius: 18px;
-  background: #DFD3B9;
+  background: #173850;
   box-shadow:
-    inset 0 0 0 2px rgba(255, 250, 235, 0.55),
+    inset 0 0 0 2px rgba(255, 250, 235, 0.35),
     0 18px 44px rgba(0, 0, 0, 0.45);
   overflow: hidden;
   position: relative;
@@ -267,8 +267,127 @@ html, body {
   align-items: center;
   justify-content: center;
   container-type: size;
-  background: radial-gradient(circle at 50% 45%, #E7D6B3 0%, #CBB182 100%);
-  box-shadow: inset 0 0 28px rgba(72, 50, 24, 0.22);
+  perspective: 1400px;
+  background: radial-gradient(ellipse at 50% 48%, #2D6286 0%, #1C4866 64%, #123147 100%);
+  box-shadow:
+    inset 0 0 40px rgba(8, 20, 32, 0.58),
+    inset 0 2px 0 rgba(255, 240, 200, 0.16);
+  user-select: none;
+}
+
+.map-canvas-wrapper.is-zoomed {
+  cursor: grab;
+}
+
+.map-canvas-wrapper.is-dragging {
+  cursor: grabbing;
+}
+
+/* Act Bookmark Ribbon (Carved Vellum Tabs — no capsule pills) */
+.map-realm-bar {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 26;
+  display: flex;
+  align-items: stretch;
+  gap: 3px;
+  padding: 4px;
+  background: linear-gradient(180deg, rgba(248, 239, 217, 0.96) 0%, rgba(226, 207, 168, 0.96) 100%);
+  border: 2px solid #8A6532;
+  border-radius: 6px;
+  box-shadow:
+    0 6px 16px rgba(10, 20, 30, 0.42),
+    inset 0 1px 0 rgba(255, 252, 242, 0.88);
+  max-width: calc(100% - 28px);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.map-realm-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.realm-tab {
+  border: 1px solid rgba(138, 101, 50, 0.34);
+  border-radius: 4px;
+  padding: 5px 11px;
+  background: rgba(255, 250, 238, 0.42);
+  color: #3A2614;
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease, transform 0.12s ease;
+}
+
+.realm-tab:hover {
+  background: rgba(220, 174, 88, 0.28);
+  border-color: rgba(138, 101, 50, 0.65);
+}
+
+.realm-tab:active {
+  transform: translateY(1px);
+}
+
+.realm-tab.active {
+  background: linear-gradient(180deg, #A33224 0%, #772015 100%);
+  color: #FFF7E2;
+  border-color: #C7922E;
+  box-shadow:
+    0 2px 6px rgba(24, 10, 4, 0.32),
+    inset 0 1px 0 rgba(255, 218, 155, 0.42);
+}
+
+/* Camera Zoom Controls */
+.map-camera-controls {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  z-index: 26;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  background: linear-gradient(180deg, rgba(248, 239, 217, 0.96) 0%, rgba(224, 204, 165, 0.96) 100%);
+  border: 2px solid #8A6532;
+  border-radius: 6px;
+  box-shadow:
+    0 5px 14px rgba(10, 20, 30, 0.42),
+    inset 0 1px 0 rgba(255, 252, 242, 0.88);
+}
+
+.map-cam-btn {
+  min-width: 30px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid rgba(138, 101, 50, 0.36);
+  border-radius: 4px;
+  background: rgba(255, 250, 238, 0.62);
+  color: #3A2614;
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.14s ease, transform 0.1s ease;
+}
+
+.map-cam-btn:hover {
+  background: #FFF8E6;
+}
+
+.map-cam-btn:active {
+  transform: translateY(1px);
+}
+
+.map-cam-fit {
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .map-zoom-layer {
@@ -276,7 +395,18 @@ html, body {
   height: min(100cqh, calc(100cqw * 650 / 1200));
   position: relative;
   transform-origin: center center;
-  transition: transform 0.85s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.55s ease;
+  transform:
+    translate(var(--cam-tx, 0%), var(--cam-ty, 0%))
+    scale(var(--cam-scale, 1))
+    perspective(1200px)
+    rotateX(var(--tilt-x, 0deg))
+    rotateY(var(--tilt-y, 0deg));
+  transition: transform 0.72s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.55s ease;
+  will-change: transform;
+}
+
+.map-zoom-layer.is-panning {
+  transition: opacity 0.55s ease;
 }
 
 .map-zoom-layer.zooming-into-node {
@@ -290,11 +420,139 @@ html, body {
   display: block;
 }
 
-/* Map Pins */
+#svg-map-container {
+  position: relative;
+  z-index: 2;
+}
+
+.map-atmosphere-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 6;
+}
+
+.map-vellum-grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 7;
+  mix-blend-mode: multiply;
+  opacity: 0.25;
+  background-repeat: repeat;
+  background-size: 160px 160px;
+  -webkit-mask-image: radial-gradient(ellipse 96% 90% at 50% 50%, #000 72%, transparent 99%);
+  mask-image: radial-gradient(ellipse 96% 90% at 50% 50%, #000 72%, transparent 99%);
+}
+
+/* Interactive Landmarks & Living Diorama States inside SVG */
+.map-landmark-hit {
+  cursor: pointer;
+  pointer-events: all;
+  transition: filter 0.22s ease, opacity 0.2s ease;
+}
+
+.map-landmark-hit:hover {
+  filter: drop-shadow(0 0 8px rgba(255, 224, 130, 0.78));
+}
+
+.map-landmark-hit:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.map-barge-bob {
+  transform-box: fill-box;
+  transform-origin: center center;
+  animation: mapBargeBob 3.8s ease-in-out infinite;
+}
+
+@keyframes mapBargeBob {
+  0%, 100% { transform: translateY(0px) rotate(-0.6deg); }
+  50% { transform: translateY(-2.5px) rotate(0.7deg); }
+}
+
+.map-beacon-flame {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  transition: opacity 0.45s ease;
+}
+
+#map-signal-beacons.beacons-lit .map-beacon-flame {
+  opacity: 1;
+  animation: beaconFlicker 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes beaconFlicker {
+  0% { transform: scaleY(0.92) scaleX(0.96); }
+  100% { transform: scaleY(1.12) scaleX(1.04); }
+}
+
+#compass-needle {
+  transform-box: fill-box;
+  transform-origin: center center;
+  transition: transform 1.15s cubic-bezier(0.22, 1.25, 0.36, 1);
+}
+
+.map-road-segment {
+  transition: opacity 0.4s ease;
+}
+
+.map-road-segment.upcoming {
+  opacity: 0.76;
+}
+
+.map-road-segment.conquered {
+  opacity: 1;
+}
+
+.map-road-segment path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: stroke 0.35s ease, opacity 0.35s ease;
+}
+
+.map-road-segment .road-bed-rim {
+  stroke: #765B3A;
+  stroke-width: 17px;
+}
+
+.map-road-segment .road-surface {
+  stroke: #E5D4AD;
+  stroke-width: 12px;
+}
+
+.map-road-segment .road-center-stitch {
+  stroke: #9A7C52;
+  stroke-width: 2.2px;
+  stroke-dasharray: 7 7;
+  opacity: 0.72;
+}
+
+.map-road-segment.conquered .road-bed-rim {
+  stroke: #8A5D18;
+}
+
+.map-road-segment.conquered .road-surface {
+  stroke: #F6CF65;
+}
+
+.map-road-segment.conquered .road-center-stitch {
+  stroke: #FFF7D1;
+  stroke-dasharray: none;
+  stroke-width: 2.6px;
+  opacity: 0.88;
+}
+
+/* ==================== 2.5D PLINTH PINS & STAR ARCS ==================== */
 .map-nodes-overlay {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  z-index: 12;
 }
 
 .map-node-pin {
@@ -302,90 +560,247 @@ html, body {
   transform: translate(-50%, -50%);
   pointer-events: auto;
   cursor: pointer;
+  background: transparent;
+  border: none;
+  padding: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.2s ease;
   z-index: 5;
 }
 
 .map-node-pin:hover {
-  transform: translate(-50%, -54%) scale(1.12);
+  transform: translate(-50%, calc(-50% - 4px)) scale(1.09);
   z-index: 15;
 }
 
-.node-medallion {
-  width: 52px;
-  height: 52px;
+.map-node-pin:active .node-medallion {
+  transform: translateY(3px);
+}
+
+/* Oblique directional ground shadow under extruded plinth */
+.node-ground-shadow {
+  position: absolute;
+  left: 50%;
+  top: 54%;
+  width: 60px;
+  height: 22px;
+  transform: translate(-42%, 14px);
   border-radius: 50%;
-  background: radial-gradient(circle at 32% 28%, #FFFFFF 0%, #F7EBCD 65%, #DFC89A 100%);
-  border: 3.5px solid var(--navy-royal);
+  background: radial-gradient(ellipse at center, rgba(18, 12, 6, 0.54) 0%, rgba(18, 12, 6, 0) 75%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Floating 3-Star Mastery Arc */
+.node-stars-arc {
+  position: absolute;
+  top: -17px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: flex-end;
+  gap: 1px;
+  pointer-events: none;
+  z-index: 5;
+  filter: drop-shadow(0 2px 2px rgba(18, 12, 6, 0.52));
+}
+
+.node-star-pip {
+  width: 13px;
+  height: 13px;
+  display: block;
+}
+
+.node-star-pip.center-star {
+  width: 16px;
+  height: 16px;
+  transform: translateY(-3px);
+}
+
+.node-star-pip.empty {
+  opacity: 0.42;
+  filter: grayscale(0.88) brightness(0.65);
+}
+
+.map-node-pin {
+  --act-rim: var(--navy-royal);
+  --act-wall-1: #182948;
+  --act-wall-2: #101B30;
+  --act-badge-top: #274D82;
+  --act-badge-bot: #152B4A;
+  --act-plate-border: var(--gold-burnished);
+  --act-coin-bg: radial-gradient(circle at 34% 26%, #FFFFFF 0%, #F7EBCD 66%, #DFC690 100%);
+  --act-shadow: rgba(18, 12, 6, 0.48);
+}
+
+/* Vivid Act Color Delineation (Preserved in both Unmastered & Mastered states) */
+.map-node-pin.act-1 {
+  --act-rim: #1D7A46;
+  --act-wall-1: #135430;
+  --act-wall-2: #0A311B;
+  --act-badge-top: #259457;
+  --act-badge-bot: #145431;
+  --act-plate-border: #2E8B57;
+  --act-coin-bg: radial-gradient(circle at 34% 26%, #FAFFFB 0%, #E2F4E7 66%, #B4DAC0 100%);
+  --act-shadow: rgba(12, 32, 18, 0.50);
+}
+
+.map-node-pin.act-2 {
+  --act-rim: #1C5DB3;
+  --act-wall-1: #12407C;
+  --act-wall-2: #0A2346;
+  --act-badge-top: #2874D4;
+  --act-badge-bot: #154586;
+  --act-plate-border: #3879CC;
+  --act-coin-bg: radial-gradient(circle at 34% 26%, #F8FBFF 0%, #DFECFC 66%, #AECAF0 100%);
+  --act-shadow: rgba(10, 22, 42, 0.50);
+}
+
+.map-node-pin.act-3 {
+  --act-rim: #B35E14;
+  --act-wall-1: #7C3E0B;
+  --act-wall-2: #4A2304;
+  --act-badge-top: #CE711D;
+  --act-badge-bot: #803F0A;
+  --act-plate-border: #C8782B;
+  --act-coin-bg: radial-gradient(circle at 34% 26%, #FFFBF4 0%, #F9E7CE 66%, #DEB681 100%);
+  --act-shadow: rgba(32, 18, 6, 0.50);
+}
+
+.map-node-pin.act-4 {
+  --act-rim: #B32329;
+  --act-wall-1: #7A1418;
+  --act-wall-2: #480A0C;
+  --act-badge-top: #D02E34;
+  --act-badge-bot: #80151A;
+  --act-plate-border: #CA4449;
+  --act-coin-bg: radial-gradient(circle at 34% 26%, #FFF9F9 0%, #F8DEDE 66%, #DDA7A7 100%);
+  --act-shadow: rgba(34, 10, 10, 0.52);
+}
+
+.node-medallion {
+  width: 50px;
+  height: 46px;
+  border-radius: 50%;
+  background: var(--act-coin-bg);
+  border: 4px solid var(--act-rim);
   box-shadow:
-    inset 0 2px 3px rgba(255, 255, 255, 0.85),
-    0 6px 14px rgba(20, 15, 10, 0.45);
+    inset 0 2px 3px rgba(255, 255, 255, 0.88),
+    0 5px 0 var(--act-wall-1),
+    0 7px 0 var(--act-wall-2),
+    0 11px 16px var(--act-shadow);
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
+  z-index: 2;
+  transition: transform 0.16s ease, box-shadow 0.2s ease;
 }
 
-/* Color-Coded Outlines & Number Badges Matching Each Act (1–4) */
-.map-node-pin.act-1 .node-medallion {
-  border-color: #246B43;
-}
-.map-node-pin.act-1 .node-num-badge {
-  background: linear-gradient(180deg, #2E7D52 0%, #1B4D31 100%);
-}
-.map-node-pin.act-1 .node-label-plate {
-  border-color: #3D8C60;
+.node-medallion svg {
+  width: 24px;
+  height: 24px;
+  display: block;
 }
 
-.map-node-pin.act-2 .node-medallion {
-  border-color: #1F4E8C;
-}
-.map-node-pin.act-2 .node-num-badge {
-  background: linear-gradient(180deg, #2B62AB 0%, #163763 100%);
-}
-.map-node-pin.act-2 .node-label-plate {
-  border-color: #467EC7;
-}
-
-.map-node-pin.act-3 .node-medallion {
-  border-color: #8F5219;
-}
-.map-node-pin.act-3 .node-num-badge {
-  background: linear-gradient(180deg, #A86424 0%, #663910 100%);
-}
-.map-node-pin.act-3 .node-label-plate {
-  border-color: #C27B38;
+/* Stronghold Boss Armor Plinth (Distinct Size, Radiant Battle Aura & Carved Nameplate) */
+.map-node-pin.boss-node::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 78px;
+  height: 74px;
+  transform: translate(-50%, -50%);
+  border-radius: 22px;
+  background: radial-gradient(circle, rgba(242, 178, 52, 0.36) 0%, rgba(196, 48, 36, 0.20) 56%, rgba(196, 48, 36, 0) 76%);
+  pointer-events: none;
+  z-index: 0;
 }
 
-.map-node-pin.act-4 .node-medallion {
-  border-color: #9E2626;
-}
-.map-node-pin.act-4 .node-num-badge {
-  background: linear-gradient(180deg, #BA3232 0%, #731919 100%);
-}
-.map-node-pin.act-4 .node-label-plate {
-  border-color: #CC4B4B;
+.map-node-pin.boss-node .node-stars-arc {
+  top: -19px;
 }
 
 .map-node-pin.boss-node .node-medallion {
-  width: 60px;
-  height: 60px;
+  width: 62px;
+  height: 58px;
   border-radius: 16px;
-  border-width: 4px;
-  border-color: #8E1B1B;
-  background: radial-gradient(circle at 32% 28%, #FFF7EE 0%, #F4CEB3 65%, #D99568 100%);
+  border-width: 4.5px;
+  border-color: var(--act-rim);
   box-shadow:
-    inset 0 0 0 2px rgba(255, 224, 130, 0.65),
-    0 0 0 3px rgba(212, 168, 56, 0.5),
-    0 8px 18px rgba(88, 24, 24, 0.5);
+    inset 0 0 0 2.5px #2B1B10,
+    inset 0 0 0 5px #F5CC5C,
+    0 6px 0 var(--act-wall-1),
+    0 8px 0 var(--act-wall-2),
+    0 14px 20px rgba(24, 10, 6, 0.58);
+}
+
+.map-node-pin.boss-node .node-medallion svg {
+  width: 28px;
+  height: 28px;
+}
+
+.map-node-pin.final-boss-node::before {
+  width: 88px;
+  height: 82px;
+  background: radial-gradient(circle, rgba(255, 206, 72, 0.48) 0%, rgba(212, 46, 46, 0.28) 54%, rgba(196, 48, 36, 0) 78%);
+}
+
+.map-node-pin.final-boss-node .node-medallion {
+  width: 66px;
+  height: 62px;
+  border-radius: 17px;
+}
+
+.map-node-pin.boss-node .node-ground-shadow {
+  width: 74px;
+  height: 25px;
+  transform: translate(-42%, 18px);
+}
+
+.map-node-pin.boss-node .node-num-badge {
+  bottom: -4px;
+  left: -9px;
+}
+
+.map-node-pin.boss-node .node-seal-crown {
+  bottom: -4px;
+  right: -9px;
+}
+
+.node-boss-plate {
+  position: absolute;
+  bottom: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #3C2218 0%, #1F100B 100%);
+  border: 1.5px solid #F2C85B;
+  color: #FFF4CE;
+  font-family: var(--font-sans);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  line-height: 1.1;
+  text-transform: uppercase;
+  white-space: nowrap;
+  box-shadow: 0 2px 0 #120805, 0 4px 8px rgba(18, 10, 4, 0.55);
+  z-index: 6;
+  pointer-events: none;
+}
+
+.map-node-pin.final-boss-node .node-boss-plate {
+  background: linear-gradient(180deg, #8F1E1E 0%, #4E0D0D 100%);
+  border-color: #FFE48A;
+  color: #FFFDF0;
 }
 
 .map-node-pin.upcoming .node-medallion {
-  background: radial-gradient(circle at 32% 28%, #FAF5E8 0%, #EADEC4 68%, #D3C19C 100%);
-  opacity: 0.92;
+  opacity: 0.94;
 }
 
 .map-node-pin.upcoming:hover .node-medallion,
@@ -402,7 +817,7 @@ html, body {
   position: absolute;
   inset: -9px;
   border-radius: inherit;
-  border: 3px solid rgba(240, 196, 69, 0.85);
+  border: 3px solid rgba(240, 196, 69, 0.92);
   animation: nextQuestPulse 2.1s ease-in-out infinite;
   pointer-events: none;
 }
@@ -410,10 +825,10 @@ html, body {
 @keyframes nextQuestPulse {
   0%, 100% {
     transform: scale(0.96);
-    opacity: 0.9;
+    opacity: 0.92;
   }
   50% {
-    transform: scale(1.1);
+    transform: scale(1.12);
     opacity: 0.25;
   }
 }
@@ -423,80 +838,98 @@ html, body {
 }
 
 .map-node-pin.selected .node-medallion {
-  box-shadow:
-    0 0 0 5px rgba(240, 196, 69, 0.78),
-    0 0 22px rgba(240, 196, 69, 0.85),
-    0 8px 20px rgba(0, 0, 0, 0.45);
-  transform: scale(1.1);
+  outline: 3px solid #FFF8D8;
+  outline-offset: 2px;
+  filter: drop-shadow(0 0 12px rgba(245, 200, 74, 0.86));
+  transform: translateY(-2px) scale(1.07);
 }
 
+/* Mastered turns the inner coin dish radiant gold while KEEPING the thick Act rim, 3D wall, and badge hue */
 .map-node-pin.mastered .node-medallion {
   background: radial-gradient(circle at 32% 28%, #FFFDF2 0%, #F7DC79 65%, #D9A828 100%);
+  border-color: var(--act-rim);
+  box-shadow:
+    inset 0 0 0 2.5px #FFF4C6,
+    inset 0 3px 4px rgba(255, 255, 255, 0.85),
+    0 5px 0 var(--act-wall-1),
+    0 7px 0 var(--act-wall-2),
+    0 11px 18px var(--act-shadow);
+}
+
+.map-node-pin.mastered.boss-node .node-medallion {
+  box-shadow:
+    inset 0 0 0 2.5px #2B1B10,
+    inset 0 0 0 5.5px #FFF0A8,
+    0 6px 0 var(--act-wall-1),
+    0 8px 0 var(--act-wall-2),
+    0 14px 20px rgba(24, 10, 6, 0.58);
 }
 
 .node-num-badge {
   position: absolute;
-  top: -6px;
-  left: -6px;
-  background: linear-gradient(180deg, #274D82 0%, #152B4A 100%);
-  color: #FFF;
+  bottom: -6px;
+  left: -7px;
+  background: linear-gradient(180deg, var(--act-badge-top) 0%, var(--act-badge-bot) 100%);
+  color: #FFF9E6;
   font-family: var(--font-sans);
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 800;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
+  width: 23px;
+  height: 23px;
+  border-radius: 7px;
   border: 2px solid var(--gold-bright);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
-}
-
-.map-node-pin.mastered .node-num-badge {
-  background: linear-gradient(180deg, #B83232 0%, #7D1B1B 100%);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.45);
+  z-index: 4;
 }
 
 .node-seal-crown {
   position: absolute;
   bottom: -6px;
-  right: -6px;
-  width: 24px;
-  height: 24px;
+  right: -7px;
+  width: 22px;
+  height: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
-  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35));
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.42));
+  z-index: 4;
 }
 
 .node-label-plate {
   position: absolute;
-  top: calc(100% + 6px);
+  top: calc(100% + 10px);
   left: 50%;
   transform: translate(-50%, -3px);
   opacity: 0;
   pointer-events: none;
-  background: rgba(252, 246, 232, 0.96);
+  background: linear-gradient(180deg, #FDF6E4 0%, #EFE0BE 100%);
   color: var(--ink-dark);
-  border: 2px solid var(--gold-burnished);
-  border-radius: 7px;
+  border: 2px solid var(--act-plate-border);
+  border-radius: 5px;
   padding: 3px 10px;
   font-family: var(--font-sans);
   font-size: 12px;
   font-weight: 800;
   white-space: nowrap;
-  box-shadow: 0 4px 12px rgba(24, 16, 8, 0.28);
+  box-shadow: 0 2px 0 #7C5A26, 0 5px 12px rgba(24, 16, 8, 0.34);
   transition: opacity 0.16s ease, transform 0.16s ease;
   z-index: 25;
 }
 
-.map-node-pin.label-above .node-label-plate {
+.map-node-pin.boss-node .node-label-plate {
+  top: calc(100% + 22px);
+}
+
+.map-node-pin.label-above .node-label-plate,
+.map-node-pin.boss-node.label-above .node-label-plate {
   top: auto;
-  bottom: calc(100% + 7px);
+  bottom: calc(100% + 24px);
   transform: translate(-50%, 3px);
 }
 
-.map-node-pin.selected .node-label-plate,
 .map-node-pin:hover .node-label-plate,
 .map-node-pin:focus-visible .node-label-plate {
   opacity: 1;
@@ -507,59 +940,114 @@ html, body {
 .squire-map-token {
   position: absolute;
   width: 68px;
-  height: 78px;
-  transform: translate(-50%, -88%);
+  height: 76px;
+  transform: translate(-50%, -92%);
   pointer-events: none;
   z-index: 20;
-  transition: left 1.3s cubic-bezier(0.35, 0, 0.25, 1), top 1.3s cubic-bezier(0.35, 0, 0.25, 1);
   display: flex;
   flex-direction: column;
   align-items: center;
+  will-change: left, top;
 }
 
 .squire-map-token.marching .squire-token-figure {
-  animation: squireWalkBounce 0.3s infinite alternate ease-in-out;
+  animation: squireWalkBounce 0.28s infinite alternate ease-in-out;
 }
 
 @keyframes squireWalkBounce {
-  0% { transform: translateY(0px) rotate(-4deg); }
-  100% { transform: translateY(-10px) rotate(4deg); }
+  0% { translate: 0 0; }
+  100% { translate: 0 -9px; }
+}
+
+.squire-token-shadow {
+  position: absolute;
+  bottom: 4px;
+  width: 38px;
+  height: 13px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(16, 10, 4, 0.56) 0%, rgba(16, 10, 4, 0) 74%);
 }
 
 .squire-token-halo {
   position: absolute;
-  bottom: 8px;
-  width: 52px;
-  height: 20px;
+  bottom: 6px;
+  width: 54px;
+  height: 22px;
   background: radial-gradient(ellipse, rgba(240, 196, 69, 0.9) 0%, rgba(240, 196, 69, 0) 75%);
   border-radius: 50%;
 }
 
 .squire-token-figure {
-  width: 60px;
-  height: 66px;
-  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.5));
+  width: 58px;
+  height: 64px;
+  filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.48));
+  transition: transform 0.18s ease;
+  animation: squireIdleFloat 2.4s ease-in-out infinite;
+}
+
+.squire-token-figure.facing-left {
+  transform: scaleX(-1);
+}
+
+@keyframes squireIdleFloat {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -3px; }
 }
 
 /* Map Bottom Selected Level Bar */
 .map-bottom-dock {
-  height: 82px;
-  min-height: 82px;
-  background:
-    linear-gradient(180deg, #FFFDF8 0%, #F1E5CE 100%);
+  height: 80px;
+  min-height: 80px;
+  background: linear-gradient(180deg, #FFFDF8 0%, #EFE0C1 100%);
   border-top: 3px solid var(--gold-burnished);
-  box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.18);
-  padding: 0 28px;
+  box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  padding: 0 22px;
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 14px;
   z-index: 15;
 }
 
+.dock-step-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.btn-dock-step {
+  padding: 8px 11px;
+  border: 2px solid #8A6532;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #FFF9EB 0%, #EBD7AE 100%);
+  color: #3A2512;
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 2px 0 #704E22, 0 3px 6px rgba(24, 14, 4, 0.2);
+  transition: transform 0.1s ease, background 0.15s ease;
+}
+
+.btn-dock-step:hover:not(:disabled) {
+  background: linear-gradient(180deg, #FFFDF5 0%, #F4E3BC 100%);
+}
+
+.btn-dock-step:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 0 0 #704E22;
+}
+
+.btn-dock-step:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
 .dock-node-badge {
-  width: 58px;
-  height: 58px;
-  border-radius: 14px;
+  width: 54px;
+  height: 54px;
+  border-radius: 13px;
   background: radial-gradient(circle at 30% 25%, #FFFFFF 0%, #F7ECD3 100%);
   border: 2.5px solid var(--navy-royal);
   box-shadow: 0 4px 10px rgba(23, 49, 86, 0.18);
@@ -593,18 +1081,65 @@ html, body {
 
 .dock-node-title {
   font-family: var(--font-display);
-  font-size: 22px;
+  font-size: 21px;
   font-weight: 800;
   color: var(--ink-dark);
   line-height: 1.15;
 }
 
 .dock-node-desc {
-  font-size: 16.5px;
+  font-size: 15.5px;
   color: var(--ink-mid);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+@media (max-height: 760px) {
+  .map-realm-bar {
+    top: 6px;
+    padding: 3px;
+  }
+  .realm-tab {
+    padding: 4px 9px;
+    font-size: 0.72rem;
+  }
+  .map-camera-controls {
+    right: 10px;
+    bottom: 10px;
+  }
+  .map-bottom-dock {
+    height: 68px;
+    min-height: 68px;
+    padding: 0 16px;
+    gap: 10px;
+  }
+  .dock-node-badge {
+    width: 44px;
+    height: 44px;
+  }
+  .dock-node-title {
+    font-size: 18px;
+  }
+  .dock-node-desc {
+    font-size: 14px;
+  }
+  .btn-dock-step {
+    padding: 6px 9px;
+    font-size: 0.75rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-zoom-layer,
+  .map-barge-bob,
+  #map-signal-beacons.beacons-lit .map-beacon-flame,
+  .map-node-pin.next-quest .node-medallion::after,
+  .squire-token-figure,
+  .squire-map-token.marching .squire-token-figure {
+    animation: none !important;
+    transition: none !important;
+  }
 }
 
 .btn-royal-primary {
