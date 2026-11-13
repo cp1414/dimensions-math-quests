@@ -19,10 +19,11 @@
       <h1 class="brand-main">The Young Knight’s Quest</h1>
     </button>
 
-    <div class="squire-status-pill">
+    <div class="squire-banner">
       <div class="squire-rank-icon" id="squire-rank-icon"></div>
       <span class="squire-rank-label" id="squire-rank-title">Woodland Page</span>
-      <span class="seals-pill"><strong id="mastered-count">0</strong> / 23 Missions</span>
+      <span class="squire-banner-sep" aria-hidden="true"></span>
+      <span class="squire-missions-tag"><strong id="mastered-count">0</strong> / 23 Missions</span>
     </div>
 
     <nav class="top-actions">
@@ -30,21 +31,13 @@
         <span class="svg-icon" id="icon-map"></span>
         <span>← Kingdom Map</span>
       </button>
-      <button class="btn-vellum hidden" id="btn-reset-level" title="Restart this level from the beginning without resetting the rest of the game">
-        <span class="svg-icon" id="icon-reset-level"></span>
-        <span>Reset Level</span>
-      </button>
       <button class="btn-vellum" id="btn-tabletop">
         <span class="svg-icon" id="icon-abacus"></span>
         <span>Math Blocks</span>
       </button>
-      <button class="btn-vellum" id="btn-placement">
+      <button class="btn-header-quiet" id="btn-placement" title="Parent Control: Jump to any of the 23 Missions or Reset Progress">
         <span class="svg-icon" id="icon-crown"></span>
         <span>Mission Control</span>
-      </button>
-      <button class="btn-vellum btn-reset-quick" id="btn-quick-reset" title="Reset entire game back to Mission 1">
-        <span class="svg-icon" id="icon-reset"></span>
-        <span>Reset Game</span>
       </button>
       <button class="btn-vellum btn-icon-only" id="btn-sound-toggle" title="Toggle Master Aldous Voice & Chimes">
         <span class="svg-icon" id="icon-speaker"></span>
@@ -68,24 +61,18 @@
             </div>
           </div>
 
-          <!-- Subtle Cartographic Region Legend (Color-Coded to Match Lesson Circle Outlines) -->
-          <div class="map-act-legend" aria-hidden="true">
-            <span class="act-legend-item act-1"><span class="act-ring-swatch"></span>Act I · Woods of Ten (1–5)</span>
-            <span class="act-legend-item act-2"><span class="act-ring-swatch"></span>Act II · River of Twenty (6–11)</span>
-            <span class="act-legend-item act-3"><span class="act-ring-swatch"></span>Act III · Highland Strongholds (12–18)</span>
-            <span class="act-legend-item act-4"><span class="act-ring-swatch"></span>Act IV · Citadel to 100 (19–23)</span>
-          </div>
         </div>
 
         <!-- Bottom Selected Level Bar -->
         <div class="map-bottom-dock">
           <div class="dock-node-badge" id="dock-node-icon"></div>
           <div class="dock-node-info">
+            <span class="dock-act-tag" id="dock-act-tag">Act I · Forest of Ten</span>
             <h2 class="dock-node-title" id="dock-node-title">1. The Apple Orchard</h2>
             <p class="dock-node-desc" id="dock-node-desc">See how two smaller Parts join to make one Whole basket of apples.</p>
           </div>
           <button class="btn-royal-primary" id="btn-enter-node">
-            <span>Start Level</span>
+            <span id="btn-enter-node-label">Start Level →</span>
           </button>
         </div>
       </div>
@@ -111,9 +98,9 @@
 
           <!-- Simple 2-Tab Mode Switch + Dynamic Right Sidebar Toggle Button -->
           <div class="sheet-right-group">
-            <div class="mode-pill-switch">
-              <button class="mode-pill active" data-mode="learn" id="tab-learn">Lesson</button>
-              <button class="mode-pill" data-mode="trial" id="tab-trial">Play &amp; Practice</button>
+            <div class="mode-tab-switch">
+              <button class="mode-tab active" data-mode="learn" id="tab-learn">Lesson</button>
+              <button class="mode-tab" data-mode="trial" id="tab-trial">Play &amp; Practice</button>
             </div>
             <button class="btn-parent-drawer" id="btn-open-parent-guide" title="Toggle Right-Hand Parent Teaching Sidebar (Keeps Screen Visible)">
               <span class="svg-icon" id="icon-scroll"></span>
@@ -131,6 +118,10 @@
               3 red apples and 4 golden apples. What is the Whole?
             </p>
           </div>
+          <button class="btn-aldous-replay" id="btn-replay-voice" type="button" title="Hear Master Aldous speak this hint aloud" aria-label="Hear Master Aldous speak this hint aloud">
+            <span class="svg-icon" id="icon-replay-voice"></span>
+            <span id="replay-voice-label">Hear Hint</span>
+          </button>
         </div>
 
         <!-- Row 3: Center Singapore Visual Stage + Big Equation -->
@@ -222,6 +213,10 @@
           <div class="pg-footer" style="display:flex;flex-direction:column;gap:6px;">
             <button class="btn-vellum btn-sm-full" id="btn-open-node-tabletop">Open This Topic in Math Blocks →</button>
             <button class="btn-royal-primary btn-sm-full" id="btn-force-mastery">Complete Quest &amp; March to Next →</button>
+            <button class="btn-parent-danger btn-sm-full" id="btn-reset-level" title="Restart this mission from Step 1 without affecting other missions">
+              <span class="svg-icon" id="icon-reset-level"></span>
+              <span id="reset-level-label">Restart This Mission</span>
+            </button>
           </div>
         </div>
       </aside>
@@ -241,9 +236,9 @@
             <button class="tool-tab" data-tool="groupsfrac">6. Groups &amp; Halves <span class="tt-ch">Ch 14–15</span></button>
             <button class="tool-tab" data-tool="clockcoins">7. Clock &amp; Coins <span class="tt-ch">Ch 18–19</span></button>
           </div>
-          <div class="mode-pill-switch">
-            <button class="mode-pill active" id="tt-mode-explore">Explore &amp; Teach</button>
-            <button class="mode-pill" id="tt-mode-quiz">Practice &amp; Quiz Me</button>
+          <div class="mode-tab-switch">
+            <button class="mode-tab active" id="tt-mode-explore">Explore &amp; Teach</button>
+            <button class="mode-tab" id="tt-mode-quiz">Practice &amp; Quiz Me</button>
           </div>
         </div>
         <div class="tabletop-workspace" id="tabletop-workspace"></div>
@@ -262,9 +257,9 @@
         “Well done, young Squire! You have earned all 5 Golden Shields. Let us march onward along the King’s Highway!”
       </p>
       <div class="victory-actions">
-        <button class="btn-vellum" id="btn-stay-practice">Play Next Quest Here (Deepen Mastery)</button>
+        <button class="btn-vellum" id="btn-stay-practice">Play Again (Next Star)</button>
         <button class="btn-royal-primary btn-lg" id="btn-march-onward">
-          <span>March to Next Level →</span>
+          <span>March Onward →</span>
         </button>
       </div>
     </div>
@@ -282,7 +277,7 @@
       </div>
       <div class="placement-controls-row">
         <button class="btn-vellum" id="btn-unlock-all">Complete All 23 Missions</button>
-        <button class="btn-vellum" id="btn-reset-progress">Full Reset (Mission 1)</button>
+        <button class="btn-parent-danger" id="btn-reset-progress">Full Reset (Mission 1)</button>
       </div>
       <div class="placement-grid" id="placement-grid"></div>
     </div>
