@@ -83,6 +83,8 @@ var Audio = function(src) {
 
 def run_grade1_jsc_audit():
     js_test_code = MOCK_DOM_PRELUDE + r"""
+    load("shared/pwa-register.js");
+    load("shared/audio-engine.js");
     load("grades/g1/curriculum.js");
     load("grades/g1/visuals.js");
     load("grades/g1/app.js");
@@ -269,6 +271,7 @@ def run_grade1_jsc_audit():
 
 def run_kindergarten_jsc_audit():
     js_test_code = MOCK_DOM_PRELUDE + r"""
+    load("shared/pwa-register.js");
     load("shared/audio-engine.js");
     load("shared/cpa-primitives.js");
     load("grades/k/curriculum.js");
@@ -440,14 +443,27 @@ def verify_ui_and_compliance(g1_positions, k_positions):
     )
 
     files_to_scan = [
-        "index.html", "hub.css", "hub-art.js", "hub.js", "manifest.json", "sw.js",
-        "shared/grades-registry.js", "shared/audio-engine.js", "shared/cpa-primitives.js",
+        "index.html", "hub/hub.css", "hub/hub-art.js", "hub/hub.js", "manifest.json", "sw.js",
+        "shared/pwa-register.js", "shared/grades-registry.js", "shared/audio-engine.js", "shared/cpa-primitives.js",
         "grades/g1/index.html", "grades/g1/styles.css", "grades/g1/curriculum.js", "grades/g1/visuals.js", "grades/g1/app.js",
         "grades/k/index.html", "grades/k/styles.css", "grades/k/curriculum.js", "grades/k/visuals.js", "grades/k/garden3d.js", "grades/k/app.js",
     ]
 
     if not os.path.exists(os.path.join(BASE_DIR, "shared/vendor/three/three.min.js")):
         errors.append("Missing vendored Three.js library: shared/vendor/three/three.min.js")
+
+    with open(os.path.join(BASE_DIR, "sw.js"), "r", encoding="utf-8") as swf:
+        sw_text = swf.read()
+    m_assets = re.search(r"const\s+CORE_SHELL_ASSETS\s*=\s*\[(.*?)\];", sw_text, re.DOTALL)
+    if not m_assets:
+        errors.append("sw.js missing CORE_SHELL_ASSETS list")
+    else:
+        for asset_path in re.findall(r'"([^"]+)"', m_assets.group(1)):
+            if asset_path == "./":
+                continue
+            rel_asset = asset_path[2:] if asset_path.startswith("./") else asset_path
+            if not os.path.exists(os.path.join(BASE_DIR, rel_asset)):
+                errors.append(f"sw.js CORE_SHELL_ASSETS entry missing on disk: {asset_path}")
 
     for rel in files_to_scan + ["README.md"]:
         fpath = os.path.join(BASE_DIR, rel)
@@ -464,7 +480,7 @@ def verify_ui_and_compliance(g1_positions, k_positions):
         if tm:
             errors.append(f"Found prohibited curriculum trademark term(s) in {rel}: {set(tm)}")
 
-    for css_rel in ["hub.css", "grades/g1/styles.css", "grades/k/styles.css"]:
+    for css_rel in ["hub/hub.css", "grades/g1/styles.css", "grades/k/styles.css"]:
         with open(os.path.join(BASE_DIR, css_rel), "r", encoding="utf-8") as f:
             css = f.read()
         if "100vh" not in css or "100dvh" not in css or "overflow: hidden" not in css:
@@ -502,9 +518,11 @@ def run_hub_jsc_audit():
       if (ev === "DOMContentLoaded") domReadyCb = cb;
     };
     setTimeout = function(cb) { if (typeof cb === "function") cb(); };
+    load("shared/pwa-register.js");
+    load("shared/audio-engine.js");
     load("shared/grades-registry.js");
-    load("hub-art.js");
-    load("hub.js");
+    load("hub/hub-art.js");
+    load("hub/hub.js");
     localStorage.setItem("young_knights_quest_v2", JSON.stringify({ nodeProgress: { "1": { mastered: true, stars: 2 } } }));
     localStorage.setItem("four_seasons_garden_v1", JSON.stringify({ nodeProgress: { "1": { mastered: true, stars: 1 } } }));
     if (domReadyCb) domReadyCb();

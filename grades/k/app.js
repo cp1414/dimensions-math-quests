@@ -54,21 +54,7 @@ const App = {
   },
 
   registerServiceWorker() {
-    try {
-      if (typeof navigator !== "undefined" && "serviceWorker" in navigator && window.location && window.location.protocol.startsWith("http")) {
-        const hadController = !!navigator.serviceWorker.controller;
-        let reloaded = false;
-        navigator.serviceWorker.addEventListener("controllerchange", () => {
-          if (hadController && !reloaded) {
-            reloaded = true;
-            window.location.reload();
-          }
-        });
-        navigator.serviceWorker.register("../../sw.js", { scope: "../../", updateViaCache: "none" })
-          .then((reg) => reg && reg.update && reg.update().catch(() => {}))
-          .catch(() => {});
-      }
-    } catch (e) {}
+    HearthPWA.registerServiceWorker("../../sw.js", "../../");
   },
 
   loadState() {
@@ -132,21 +118,11 @@ const App = {
   },
 
   openModal(modalId) {
-    const el = document.getElementById(modalId);
-    if (!el) return;
-    el.classList.remove("hidden");
-    if (typeof el.showModal === "function") {
-      try { if (!el.open) el.showModal(); } catch (e) {}
-    }
+    HearthPWA.openDialog(modalId);
   },
 
   closeModal(modalId) {
-    const el = document.getElementById(modalId);
-    if (!el) return;
-    el.classList.add("hidden");
-    if (typeof el.close === "function") {
-      try { if (el.open) el.close(); } catch (e) {}
-    }
+    HearthPWA.closeDialog(modalId);
   },
 
   initDOMListeners() {
@@ -213,6 +189,7 @@ const App = {
 
     on("btn-placement", "click", () => this.openWalkControl());
     on("btn-close-placement", "click", () => this.closeModal("placement-modal"));
+    HearthPWA.bindDialogDismiss(["victory-modal", "placement-modal"]);
     on("btn-unlock-all", "click", () => {
       GARDEN_NODES.forEach((n) => {
         const p = this.getProgress(n.id);

@@ -1,5 +1,5 @@
 // ============================================================================
-// THE YOUNG KNIGHT'S QUEST — SINGLE-PAGE GAME CONTROLLER & MERLIN VOICE ENGINE
+// THE YOUNG KNIGHT'S QUEST — GRADE 1 SINGLE-PAGE GAME CONTROLLER
 // ============================================================================
 
 const STORAGE_KEY = "young_knights_quest_v2";
@@ -95,43 +95,15 @@ const App = {
   },
 
   registerServiceWorker() {
-    try {
-      if (typeof navigator !== "undefined" && "serviceWorker" in navigator && window.location && window.location.protocol.startsWith("http")) {
-        const hadController = !!navigator.serviceWorker.controller;
-        let reloaded = false;
-        navigator.serviceWorker.addEventListener("controllerchange", () => {
-          if (hadController && !reloaded) {
-            reloaded = true;
-            window.location.reload();
-          }
-        });
-        navigator.serviceWorker.register("../../sw.js", { scope: "../../", updateViaCache: "none" })
-          .then((reg) => reg && reg.update && reg.update().catch(() => {}))
-          .catch(() => {});
-      }
-    } catch (e) {}
+    HearthPWA.registerServiceWorker("../../sw.js", "../../");
   },
 
   openModal(modalId) {
-    const el = document.getElementById(modalId);
-    if (!el) return;
-    el.classList.remove("hidden");
-    if (typeof el.showModal === "function") {
-      try {
-        if (!el.open) el.showModal();
-      } catch (e) {}
-    }
+    HearthPWA.openDialog(modalId);
   },
 
   closeModal(modalId) {
-    const el = document.getElementById(modalId);
-    if (!el) return;
-    el.classList.add("hidden");
-    if (typeof el.close === "function") {
-      try {
-        if (el.open) el.close();
-      } catch (e) {}
-    }
+    HearthPWA.closeDialog(modalId);
   },
 
   loadState() {
@@ -155,6 +127,7 @@ const App = {
     } catch (e) {
       console.warn("Could not read saved state:", e);
     }
+    SharedAudioEngine.setSoundEnabled(this.state.soundEnabled);
   },
 
   saveState() {
@@ -199,11 +172,9 @@ const App = {
   },
 
   // --------------------------------------------------------------------------
-  // MASTER ALDOUS STATIC AUDIO VOICE PLAYER (Plays ./audio/*.wav)
-  // Uses Web Audio API AudioBuffer cache when available, with HTMLAudio fallback
+  // MASTER ALDOUS STATIC AUDIO VOICE PLAYER (Plays grades/g1/audio/*.wav)
+  // Delegates to SharedAudioEngine for Web Audio buffer cache + HTML5 fallback
   // --------------------------------------------------------------------------
-  audioBufferCache: {},
-  currentBufferSource: null,
   lastProblemVoiceKey: null,
   lastProblemVoiceFallback: null,
   voiceSpeakingTimer: null,
@@ -226,19 +197,7 @@ const App = {
 
   stopCurrentAudio() {
     this.setAldousSpeaking(false);
-    try {
-      if (this.currentBufferSource) {
-        this.currentBufferSource.stop();
-        this.currentBufferSource.disconnect();
-        this.currentBufferSource = null;
-      }
-    } catch (e) {}
-    try {
-      if (this.currentAudio) {
-        this.currentAudio.pause();
-        this.currentAudio.currentTime = 0;
-      }
-    } catch (e) {}
+    SharedAudioEngine.stopAll();
   },
 
   playVoiceClip(clipKey, fallbackKey = null) {
@@ -247,86 +206,18 @@ const App = {
       this.lastProblemVoiceFallback = fallbackKey;
     }
     if (!this.state.soundEnabled) return;
-    this.stopCurrentAudio();
-    this.setAldousSpeaking(true);
-
-    const playWithAudioElement = (keyToPlay, fbKey) => {
-      try {
-        const audio = new Audio(`audio/${keyToPlay}.wav`);
-        audio.volume = 0.95;
-        audio.addEventListener("ended", () => this.setAldousSpeaking(false), { once: true });
-        if (fbKey) {
-          audio.addEventListener("error", () => {
-            const fb = new Audio(`audio/${fbKey}.wav`);
-            fb.volume = 0.95;
-            fb.addEventListener("ended", () => this.setAldousSpeaking(false), { once: true });
-            this.currentAudio = fb;
-            fb.play().catch(() => this.setAldousSpeaking(false));
-          }, { once: true });
-        }
-        this.currentAudio = audio;
-        audio.play().catch(() => this.setAldousSpeaking(false));
-      } catch (e) {
-        this.setAldousSpeaking(false);
-      }
-    };
-
-    try {
-      const Ctx = (typeof window !== "undefined") && (window.AudioContext || window.webkitAudioContext);
-      const canFetch = (typeof fetch === "function") && (typeof window !== "undefined") && window.location && window.location.protocol.startsWith("http");
-      if (!Ctx || !canFetch) {
-        playWithAudioElement(clipKey, fallbackKey);
-        return;
-      }
-      if (!this.audioCtx) this.audioCtx = new Ctx();
-      const ctx = this.audioCtx;
-      if (ctx.state === "suspended") ctx.resume().catch(() => {});
-
-      const playDecodedBuffer = (buf) => {
-        if (!this.state.soundEnabled) return;
-        this.stopCurrentAudio();
-        this.setAldousSpeaking(true);
-        const source = ctx.createBufferSource();
-        const gainNode = ctx.createGain();
-        gainNode.gain.value = 0.95;
-        source.buffer = buf;
-        source.connect(gainNode);
-        gainNode.connect(ctx.destination);
-        source.onended = () => this.setAldousSpeaking(false);
-        this.currentBufferSource = source;
-        source.start(0);
-      };
-
-      if (this.audioBufferCache[clipKey]) {
-        playDecodedBuffer(this.audioBufferCache[clipKey]);
-        return;
-      }
-
-      fetch(`audio/${clipKey}.wav`)
-        .then(res => {
-          if (!res.ok) throw new Error("Missing audio clip");
-          return res.arrayBuffer();
-        })
-        .then(arr => ctx.decodeAudioData(arr))
-        .then(decoded => {
-          this.audioBufferCache[clipKey] = decoded;
-          playDecodedBuffer(decoded);
-        })
-        .catch(() => {
-          if (fallbackKey && fallbackKey !== clipKey) {
-            playWithAudioElement(fallbackKey, null);
-          } else {
-            playWithAudioElement(clipKey, fallbackKey);
-          }
-        });
-    } catch (e) {
-      playWithAudioElement(clipKey, fallbackKey);
-    }
+    SharedAudioEngine.playClip("audio", clipKey, {
+      fallbackKey,
+      volume: 0.95,
+      onStart: () => this.setAldousSpeaking(true),
+      onEnd: () => this.setAldousSpeaking(false)
+    });
   },
 
   replayCurrentVoice() {
     if (!this.state.soundEnabled) {
       this.state.soundEnabled = true;
+      SharedAudioEngine.setSoundEnabled(true);
       this.saveState();
       this.updateHeaderStatus();
     }
@@ -354,30 +245,7 @@ const App = {
   },
 
   playTone(freqs, type = "triangle", duration = 0.22, stagger = 0.08) {
-    if (!this.state.soundEnabled) return;
-    try {
-      const Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!this.audioCtx) this.audioCtx = new Ctx();
-      const ctx = this.audioCtx;
-      if (ctx.state === "suspended") ctx.resume();
-
-      freqs.forEach((f, idx) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = type;
-        osc.frequency.value = f;
-
-        const start = ctx.currentTime + idx * stagger;
-        gain.gain.setValueAtTime(0.001, start);
-        gain.gain.linearRampToValueAtTime(0.11, start + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.0008, start + duration);
-
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(start);
-        osc.stop(start + duration + 0.02);
-      });
-    } catch (e) {}
+    SharedAudioEngine.playTone(freqs, type, duration, stagger, 0.11);
   },
 
   playSuccessChime() {
@@ -2170,8 +2038,9 @@ const App = {
 
     document.getElementById("btn-sound-toggle").addEventListener("click", () => {
       this.state.soundEnabled = !this.state.soundEnabled;
+      SharedAudioEngine.setSoundEnabled(this.state.soundEnabled);
       if (!this.state.soundEnabled) {
-        this.stopCurrentAudio();
+        this.setAldousSpeaking(false);
       }
       this.saveState();
       this.updateHeaderStatus();
@@ -2311,15 +2180,7 @@ const App = {
       this.closeModal("placement-modal");
     });
 
-    ["victory-modal", "placement-modal"].forEach(modalId => {
-      const modalEl = document.getElementById(modalId);
-      if (modalEl) {
-        modalEl.addEventListener("close", () => modalEl.classList.add("hidden"));
-        modalEl.addEventListener("click", (e) => {
-          if (e.target === modalEl) this.closeModal(modalId);
-        });
-      }
-    });
+    HearthPWA.bindDialogDismiss(["victory-modal", "placement-modal"]);
 
     document.getElementById("btn-unlock-all").addEventListener("click", () => {
       CURRICULUM_NODES.forEach(n => {

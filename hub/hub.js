@@ -30,6 +30,9 @@
 
     getCtx() {
       if (!this.enabled || typeof window === "undefined") return null;
+      if (typeof SharedAudioEngine !== "undefined") {
+        return SharedAudioEngine.getContext();
+      }
       const Ctx = window.AudioContext || window.webkitAudioContext;
       if (!Ctx) return null;
       if (!this.ctx) this.ctx = new Ctx();
@@ -766,43 +769,15 @@
   }
 
   function initDialog() {
-    const dlg = document.getElementById("hub-about-dialog");
     const openBtn = document.getElementById("btn-hub-about");
     const closeBtn = document.getElementById("btn-close-about");
-    if (!dlg || !openBtn || !closeBtn) return;
-
-    openBtn.addEventListener("click", () => {
-      dlg.classList.remove("hidden");
-      if (typeof dlg.showModal === "function" && !dlg.open) dlg.showModal();
-    });
-    closeBtn.addEventListener("click", () => {
-      dlg.classList.add("hidden");
-      if (typeof dlg.close === "function" && dlg.open) dlg.close();
-    });
-    dlg.addEventListener("click", (e) => {
-      if (e.target === dlg) {
-        dlg.classList.add("hidden");
-        if (typeof dlg.close === "function" && dlg.open) dlg.close();
-      }
-    });
-  }
-
-  function registerRootSW() {
-    try {
-      if (typeof navigator !== "undefined" && "serviceWorker" in navigator && window.location && window.location.protocol.startsWith("http")) {
-        const hadController = !!navigator.serviceWorker.controller;
-        let reloaded = false;
-        navigator.serviceWorker.addEventListener("controllerchange", () => {
-          if (hadController && !reloaded) {
-            reloaded = true;
-            window.location.reload();
-          }
-        });
-        navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" })
-          .then((reg) => reg && reg.update && reg.update().catch(() => {}))
-          .catch(() => {});
-      }
-    } catch (e) {}
+    if (openBtn) {
+      openBtn.addEventListener("click", () => HearthPWA.openDialog("hub-about-dialog"));
+    }
+    if (closeBtn) {
+      closeBtn.addEventListener("click", () => HearthPWA.closeDialog("hub-about-dialog"));
+    }
+    HearthPWA.bindDialogDismiss(["hub-about-dialog"]);
   }
 
   function init() {
@@ -810,7 +785,7 @@
     bindRackAndDrag();
     initSoundToggle();
     initDialog();
-    registerRootSW();
+    HearthPWA.registerServiceWorker("./sw.js");
 
     if (typeof GRADE_CATALOG !== "undefined" && GRADE_CATALOG.length > 0) {
       selectGrade(GRADE_CATALOG[0].id, true);

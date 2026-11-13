@@ -7,7 +7,7 @@ SECURITY POLICY:
    downloading open-source packages/weights.
 2. Uses ONLY the pure mathematical `.onnx` format (`kokoro-v1.0.int8.onnx`)
    and JSON/NPZ voice embeddings — NEVER PyTorch `.pt`/`.pth` pickle files.
-3. After generating the static `.wav` files into `../audio/`, delete the
+3. After generating the static `.wav` files into `../grades/g1/audio/`, delete the
    temporary virtual environment and `.onnx` model files so only plain `.wav`
    audio files remain in the project.
 """
@@ -100,7 +100,7 @@ LINES = {
 
 def main():
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    audio_dir = os.path.join(base_dir, "audio")
+    audio_dir = os.path.join(base_dir, "grades", "g1", "audio")
     tmp_dir = os.path.join(base_dir, ".tmp_voice_build")
     os.makedirs(audio_dir, exist_ok=True)
     os.makedirs(tmp_dir, exist_ok=True)

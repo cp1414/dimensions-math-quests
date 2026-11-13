@@ -32,7 +32,13 @@ Journey alongside **Master Aldous** across **23 Missions in 4 Acts** (**19 Core 
 ## Running Locally & Verification
 
 * **Play Locally:** Open [`index.html`](./index.html) directly in Safari, Chrome, or Edge, or serve the folder over HTTP (`python3 -m http.server`).
-* **Automated Multi-Grade QA Suite ([`tests/verify_all.py`](./tests/verify_all.py)):** Fuzz-tests 3,600 generated math problems across Kindergarten (17 walks) and Grade 1 (23 missions), checks adaptive mastery, workshop stations, audio headers, 100vh lock, CSP headers, and compliance:
+* **Project Structure:**
+  * [`index.html`](./index.html), [`manifest.json`](./manifest.json), [`icon.svg`](./icon.svg), [`sw.js`](./sw.js) — Multi-grade PWA root & offline Service Worker with Safari byte-range audio support.
+  * [`hub/`](./hub/) — Desktop Study Library Home Hub (`hub.css`, `hub.js`, `hub-art.js`).
+  * [`shared/`](./shared/) — Shared registry, PWA/dialog helper, audio engine, CPA primitives, and vendored Three.js.
+  * [`grades/k/`](./grades/k/) & [`grades/g1/`](./grades/g1/) — Self-contained grade story worlds, curricula, and Grade 1 voice bank ([`grades/g1/audio/`](./grades/g1/audio/)).
+  * [`scripts/`](./scripts/) & [`tests/`](./tests/) — Static voice builder & automated QA suite.
+* **Automated Multi-Grade QA Suite ([`tests/verify_all.py`](./tests/verify_all.py)):** Fuzz-tests 3,600 generated math problems across Kindergarten (17 walks) and Grade 1 (23 missions), checks adaptive mastery, workshop stations, audio headers, `sw.js` asset list, 100vh lock, CSP headers, and compliance:
   ```bash
   python3 tests/verify_all.py
   ```
