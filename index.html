@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#1A1510" />
+  <meta name="theme-color" content="#1B301E" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; media-src 'self';" />
-  <title>Hearth &amp; Wonder Math — Classical Homeschool Library</title>
+  <title>Hearth &amp; Wonder Math — Desktop Study Library</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" type="image/svg+xml" href="icon.svg" />
   <link rel="stylesheet" href="hub.css" />
@@ -18,32 +18,171 @@
       <div class="hub-crest" id="hub-crest-icon" aria-hidden="true"></div>
       <div>
         <h1 class="hub-title">Hearth &amp; Wonder Math</h1>
-        <p class="hub-subtitle">Classical Visual &amp; Mental Math · Local &amp; Offline</p>
+        <p class="hub-subtitle">Curriculum CD-ROM Library · Private &amp; Offline</p>
       </div>
     </div>
 
     <div class="hub-top-actions">
-      <button type="button" class="hub-btn-brass" id="btn-hub-about">For Parents: How It Works</button>
+      <button type="button" class="hub-btn-hardware" id="btn-hub-sound" aria-pressed="true" title="Toggle mechanical CD drive &amp; desk audio">
+        <span class="btn-icon-slot" id="hub-sound-icon" aria-hidden="true"></span>
+        <span id="hub-sound-label">Desk Audio: On</span>
+      </button>
+      <button type="button" class="hub-btn-hardware hub-btn-accent" id="btn-hub-about">For Parents: How It Works</button>
     </div>
   </header>
 
-  <main class="hub-stage">
-    <section class="hub-intro" aria-label="Choose a grade level">
-      <div class="hub-kicker-rule">
-        <span class="rule-line"></span>
-        <span class="hub-kicker">CLASSICAL HOMESCHOOL STUDY</span>
-        <span class="rule-line"></span>
+  <main class="hub-desk-stage">
+    <div class="room-backdrop" aria-hidden="true">
+      <div class="wall-ambient-glow">
+        <div class="study-wall-frame" id="room-wall-art"></div>
       </div>
-      <h2>Choose a Volume to Open</h2>
-      <p>Select your child’s grade to step directly into their self-contained world, manipulatives, and live Parent Guide.</p>
+      <div class="wall-chair-rail"></div>
+      <div class="desk-surface">
+        <div class="desk-grain"></div>
+        <div class="desk-bevel-edge"></div>
+      </div>
+    </div>
+
+    <section class="desk-workspace" aria-label="Curriculum CD-ROM Launcher">
+      <!-- LEFT: CARVED WALNUT CD STAND & JEWEL CASES -->
+      <div class="shelf-zone">
+        <div class="shelf-header-plaque">
+          <h2 class="plaque-title">Curriculum Disc Library</h2>
+          <p class="plaque-subtitle">Pick up a jewel case and place its disc into the computer drive to begin.</p>
+        </div>
+
+        <div class="cd-rack-housing">
+          <div class="cd-rack-grid" id="hub-grade-grid" role="list" aria-label="Grade Curriculum Discs"></div>
+          <div class="cd-rack-rail" aria-hidden="true">
+            <span class="rail-groove"></span>
+            <span class="rail-badge">Compact Disc Library</span>
+            <span class="rail-groove"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: EARLY-2000s WARM PUTTY CRT MONITOR & DESKTOP TOWER -->
+      <aside class="pc-corner-zone" aria-label="Desktop PC Station">
+        <div class="hardware-ensemble">
+          <!-- CRT DESKTOP MONITOR -->
+          <div class="crt-unit" id="crt-monitor">
+            <div class="crt-outer-shell">
+              <div class="crt-top-vent" aria-hidden="true"></div>
+              <div class="crt-bezel-inner">
+                <div class="crt-screen-glass">
+                  <div class="crt-scanlines" aria-hidden="true"></div>
+                  <div class="crt-glare" aria-hidden="true"></div>
+                  <div class="crt-screen-body" id="crt-screen-body" aria-live="polite"></div>
+                </div>
+              </div>
+              <div class="crt-chin-bar">
+                <div class="crt-brand-plate">HearthScreen 17”</div>
+                <div class="crt-dials" aria-hidden="true">
+                  <span class="crt-dial"></span>
+                  <span class="crt-dial"></span>
+                  <span class="crt-power-led on" id="crt-power-led"></span>
+                </div>
+              </div>
+            </div>
+            <div class="crt-stand-neck" aria-hidden="true"></div>
+            <div class="crt-stand-foot" aria-hidden="true"></div>
+          </div>
+
+          <!-- WARM PUTTY & WALNUT STUDY TOWER -->
+          <div class="pc-tower" id="pc-tower">
+            <div class="tower-top-cap" aria-hidden="true"></div>
+            <div class="tower-chassis">
+              <div class="tower-translucent-strip" aria-hidden="true">
+                <div class="tower-brass-pin"></div>
+                <div class="tower-fan-bay" id="tower-fan-bay"></div>
+                <div class="tower-internal-glow"></div>
+              </div>
+
+              <div class="tower-front-column">
+                <div class="tower-badge-plate">
+                  <span class="tower-model">Hearth Desktop</span>
+                  <span class="tower-crest-dot" aria-hidden="true"></span>
+                </div>
+
+                <!-- DROP TARGET: 5.25" MOTORIZED OPTICAL DRIVE -->
+                <div class="optical-drive-bay" id="pc-drop-zone" role="region" aria-label="PC CD-ROM Drive Drop Zone">
+                  <div class="drive-faceplate">
+                    <div class="drive-slot-bezel">
+                      <span class="drive-door-seam"></span>
+                    </div>
+                    <div class="drive-meta-row">
+                      <span class="drive-label">CD-ROM Drive</span>
+                      <div class="drive-controls">
+                        <span class="drive-busy-led" id="pc-drive-led" aria-hidden="true"></span>
+                        <button type="button" class="drive-eject-btn" id="btn-drive-eject" title="Open or close CD tray" aria-label="Open or close CD tray">Eject</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 3D SLIDING OPTICAL TRAY -->
+                  <div class="optical-tray-stage" aria-hidden="true">
+                    <div class="optical-tray" id="pc-disc-tray">
+                      <div class="tray-cradle" id="tray-cradle">
+                        <div class="tray-spindle"></div>
+                        <div class="tray-target-ring"></div>
+                        <div class="tray-inserted-disc" id="tray-inserted-disc"></div>
+                      </div>
+                      <div class="tray-front-lip">
+                        <span class="tray-drop-caption" id="tray-drop-caption">Place Disc Here</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 3.5" LOCAL SAVE BAY -->
+                <div class="floppy-bay" aria-hidden="true">
+                  <div class="floppy-slot"></div>
+                  <div class="floppy-meta">
+                    <span>Save Disk</span>
+                    <span class="floppy-led" id="pc-save-led"></span>
+                  </div>
+                </div>
+
+                <!-- POWER BUTTON & FRONT PORTS -->
+                <div class="tower-lower-panel">
+                  <div class="power-switch-housing">
+                    <button type="button" class="pc-power-button" id="btn-pc-power" title="Desktop Ready" aria-label="PC Power Status Indicator">
+                      <span class="power-ring"></span>
+                    </button>
+                    <span class="power-caption">Power</span>
+                  </div>
+                  <div class="front-io-ports" aria-hidden="true">
+                    <span class="usb-port"></span>
+                    <span class="usb-port"></span>
+                    <span class="audio-jack"></span>
+                  </div>
+                </div>
+
+                <!-- VENTILATION LOUVERS -->
+                <div class="tower-vents" aria-hidden="true">
+                  <span></span><span></span><span></span><span></span><span></span>
+                </div>
+              </div>
+            </div>
+            <div class="tower-desk-shadow" aria-hidden="true"></div>
+          </div>
+        </div>
+      </aside>
     </section>
 
-    <section class="hub-grid" id="hub-grade-grid" aria-label="Grade Volumes"></section>
-
     <footer class="hub-footer">
-      <span>100% Private Client-Side · Zero Tracking · Progress Saved Locally per Grade · Concrete → Pictorial → Abstract</span>
+      <span>100% Private Client-Side · Zero Tracking · Progress Saved Locally per Grade · Concrete to Pictorial to Abstract</span>
     </footer>
   </main>
+
+  <!-- FLOATING DRAGGED CD-ROM LAYER -->
+  <div id="dragged-disc-layer" class="dragged-disc-layer hidden" aria-hidden="true">
+    <div class="dragged-disc-shadow"></div>
+    <div class="dragged-disc-tilt" id="dragged-disc-tilt">
+      <div class="dragged-disc-art" id="dragged-disc-art"></div>
+      <div class="disc-holo-foil" id="dragged-disc-foil"></div>
+    </div>
+  </div>
 
   <dialog class="hub-dialog hidden" id="hub-about-dialog" aria-labelledby="hub-about-title">
     <div class="hub-dialog-card">
@@ -52,16 +191,16 @@
           <span class="hub-dialog-kicker">PARENT &amp; TEACHER ORIENTATION</span>
           <h2 id="hub-about-title">Calm, Focused Mathematical Order</h2>
         </div>
-        <button type="button" class="hub-close-btn" id="btn-close-about" aria-label="Close">✕</button>
+        <button type="button" class="hub-close-btn" id="btn-close-about" aria-label="Close">x</button>
       </div>
       <div class="hub-about-grid">
         <div class="hub-about-box">
           <h3>Matches Your Math Spine</h3>
-          <p>Every grade follows a clean <strong>Semester A &amp; Semester B</strong> sequence built around Concrete–Pictorial–Abstract models (Five-Frames, Ten-Frames, Number Bonds, Bar Models, Place Value, Time, and Coins).</p>
+          <p>Every grade follows a clean <strong>Semester A &amp; Semester B</strong> sequence built around Concrete-Pictorial-Abstract models (Five-Frames, Ten-Frames, Number Bonds, Bar Models, Place Value, Time, and Coins).</p>
         </div>
         <div class="hub-about-box">
           <h3>Designed for Young Eyes</h3>
-          <p>Each grade opens its own single-screen, zero-scroll world. In Kindergarten, parents click a season or lantern and Pip walks through the 3D garden automatically—no complicated steering.</p>
+          <p>Pick up a CD-ROM and place it into the drive to launch a single-screen, zero-scroll world. In Kindergarten, parents click a season or lantern and Pip walks through the 3D garden automatically.</p>
         </div>
         <div class="hub-about-box">
           <h3>Private &amp; Offline Forever</h3>
@@ -76,6 +215,7 @@
   </dialog>
 
   <script defer src="shared/grades-registry.js"></script>
+  <script defer src="hub-art.js"></script>
   <script defer src="hub.js"></script>
 </body>
 </html>

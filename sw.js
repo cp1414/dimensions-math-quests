@@ -1,8 +1,9 @@
-const CACHE_NAME = "hearth-wonder-math-hub-v8";
+const CACHE_NAME = "hearth-wonder-math-hub-v10";
 const CORE_SHELL_ASSETS = [
   "./",
   "./index.html",
   "./hub.css",
+  "./hub-art.js",
   "./hub.js",
   "./manifest.json",
   "./icon.svg",

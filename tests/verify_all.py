@@ -45,7 +45,9 @@ function getMockEl(id) {
         contains: function(c) { return !!this._set[c]; }
       },
       addEventListener: function() {},
-      setAttribute: function() {},
+      _attrs: {},
+      setAttribute: function(k, v) { this._attrs[k] = String(v); },
+      getAttribute: function(k) { return this._attrs[k] || null; },
       showModal: function() { this.open = true; },
       close: function() { this.open = false; },
       appendChild: function() {},
@@ -438,7 +440,7 @@ def verify_ui_and_compliance(g1_positions, k_positions):
     )
 
     files_to_scan = [
-        "index.html", "hub.css", "hub.js", "manifest.json", "sw.js",
+        "index.html", "hub.css", "hub-art.js", "hub.js", "manifest.json", "sw.js",
         "shared/grades-registry.js", "shared/audio-engine.js", "shared/cpa-primitives.js",
         "grades/g1/index.html", "grades/g1/styles.css", "grades/g1/curriculum.js", "grades/g1/visuals.js", "grades/g1/app.js",
         "grades/k/index.html", "grades/k/styles.css", "grades/k/curriculum.js", "grades/k/visuals.js", "grades/k/garden3d.js", "grades/k/app.js",
@@ -499,7 +501,9 @@ def run_hub_jsc_audit():
     document.addEventListener = function(ev, cb) {
       if (ev === "DOMContentLoaded") domReadyCb = cb;
     };
+    setTimeout = function(cb) { if (typeof cb === "function") cb(); };
     load("shared/grades-registry.js");
+    load("hub-art.js");
     load("hub.js");
     localStorage.setItem("young_knights_quest_v2", JSON.stringify({ nodeProgress: { "1": { mastered: true, stars: 2 } } }));
     localStorage.setItem("four_seasons_garden_v1", JSON.stringify({ nodeProgress: { "1": { mastered: true, stars: 1 } } }));
@@ -507,10 +511,46 @@ def run_hub_jsc_audit():
 
     var errors = [];
     var gridHTML = document.getElementById("hub-grade-grid").innerHTML;
-    if (gridHTML.indexOf("grades/k/index.html") === -1) errors.push("Hub missing Kindergarten link");
-    if (gridHTML.indexOf("grades/g1/index.html") === -1) errors.push("Hub missing Grade 1 link");
+    if (gridHTML.indexOf("grades/k/index.html") === -1) errors.push("Hub missing Kindergarten disc target");
+    if (gridHTML.indexOf("grades/g1/index.html") === -1) errors.push("Hub missing Grade 1 disc target");
     if (gridHTML.indexOf("<strong>1</strong> of 17 Garden Walks Complete") === -1) errors.push("Hub failed to read Kindergarten progress");
     if (gridHTML.indexOf("<strong>1</strong> of 23 Missions Complete") === -1) errors.push("Hub failed to read Grade 1 progress");
+    if (gridHTML.indexOf("PIP’S MEADOW") === -1 || gridHTML.indexOf("YOUNG KNIGHT’S QUEST") === -1) {
+      errors.push("Hub missing bespoke SVG CD-ROM cover titles");
+    }
+
+    var wallHTML = document.getElementById("room-wall-art").innerHTML;
+    if (wallHTML.indexOf("Great is our Lord, and") === -1 || wallHTML.indexOf("Psalm 147:5 (ESV)") === -1) {
+      errors.push("Study wall missing Psalm 147:5 (ESV) note card");
+    }
+    var hTransform = document.getElementById("clock-hand-hour").getAttribute("transform") || "";
+    var mTransform = document.getElementById("clock-hand-minute").getAttribute("transform") || "";
+    var sTransform = document.getElementById("clock-hand-second").getAttribute("transform") || "";
+    if (hTransform.indexOf("rotate(") !== 0 || mTransform.indexOf("rotate(") !== 0 || sTransform.indexOf("rotate(") !== 0) {
+      errors.push("Study wall clock hands failed to update from local time");
+    }
+
+    var crtEl = document.getElementById("crt-screen-body");
+    window.HubLauncher.selectGrade("g1", true);
+    if (crtEl.innerHTML.indexOf("The Young Knight") === -1) {
+      errors.push("CRT preview failed to show selected Grade 1 disc");
+    }
+
+    var protoOk = window.HubLauncher.insertDiscById("g2");
+    if (protoOk !== false || crtEl.innerHTML.indexOf("Prototype Edition") === -1) {
+      errors.push("Prototype disc insertion should display prototype eject notice without navigating");
+    }
+
+    var bootK = window.HubLauncher.insertDiscById("k");
+    if (!bootK || window.HubLauncher.getState().bootNavigatedHref !== "grades/k/index.html") {
+      errors.push("Kindergarten disc insertion failed to navigate to grades/k/index.html");
+    }
+
+    var bootG1 = window.HubLauncher.insertDiscById("g1");
+    if (!bootG1 || window.HubLauncher.getState().bootNavigatedHref !== "grades/g1/index.html") {
+      errors.push("Grade 1 disc insertion failed to navigate to grades/g1/index.html");
+    }
+
     print(JSON.stringify({ ok: errors.length === 0, errors: errors, gradesListed: GRADE_CATALOG.length }));
     """
     proc = subprocess.run([JSC_BIN, "-e", js_test_code], cwd=BASE_DIR, capture_output=True, text=True, check=True)
