@@ -97,7 +97,7 @@ const App = {
   registerServiceWorker() {
     try {
       if (typeof navigator !== "undefined" && "serviceWorker" in navigator && window.location && window.location.protocol.startsWith("http")) {
-        navigator.serviceWorker.register("./sw.js").catch(() => {});
+        navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch(() => {});
       }
     } catch (e) {}
   },
