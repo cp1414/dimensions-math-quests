@@ -191,7 +191,7 @@ const CURRICULUM_NODES = [
     iconKey: "bow",
     missionType: "bandits",
     missionActionLabel: "Bandit Lookouts Spotted",
-    mapPos: { x: 7, y: 70 },
+    mapPos: { x: 8, y: 74 },
     shortDesc: "Spot and clear 5 bandit lookouts by subitizing 5-groups, understanding zero, and ordering numbers 0 to 10.",
     teacherGuide: {
       wonder: "God created our very hands with 5 fingers on each side! In Dimensions 1A Ch. 1, children learn to see numbers 0–10 not as a blur of ones, but ordered around the anchor of 5 and 10—reflecting the Creator's orderly design.",
@@ -321,7 +321,7 @@ const CURRICULUM_NODES = [
     iconKey: "lock",
     missionType: "locks",
     missionActionLabel: "Cage Locks Broken",
-    mapPos: { x: 13, y: 53 },
+    mapPos: { x: 14, y: 52 },
     shortDesc: "Break 5 iron cage locks by mastering Part-Whole Number Bonds for 6, 7, 8, 9, and 10.",
     teacherGuide: {
       wonder: "In God's creation, wholes are harmoniously composed of parts—just as many members form one body. Number Bonds train the young Squire to see any number simultaneously as a Whole and as its Parts.",
@@ -415,7 +415,7 @@ const CURRICULUM_NODES = [
     iconKey: "log",
     missionType: "fort",
     missionActionLabel: "Fort Walls Raised",
-    mapPos: { x: 19, y: 69 },
+    mapPos: { x: 21, y: 72 },
     shortDesc: "Raise 5 timber walls by joining parts, Counting On from the greater number, and solving Missing Addends.",
     teacherGuide: {
       wonder: "Because God's laws of order never change, 5 + 3 and 3 + 5 always yield the exact same sum (the Commutative Law). Teaching the young Squire to grab the greater number first and count on saves effort and builds confidence.",
@@ -520,7 +520,7 @@ const CURRICULUM_NODES = [
     iconKey: "sword",
     missionType: "bandits",
     missionActionLabel: "Raiders Driven Back",
-    mapPos: { x: 25, y: 54 },
+    mapPos: { x: 26, y: 50 },
     shortDesc: "Drive back 5 raiders by mastering Taking-Away subtraction, Taking-Apart Number Bonds, and Fact Families.",
     teacherGuide: {
       wonder: "Addition and subtraction are inverse mirror images in God's ordered mathematics: what addition joins together, subtraction takes apart. In Dimensions 1A Ch. 4, children master both 'Taking Away' and 'Missing Part' subtraction.",
@@ -612,7 +612,7 @@ const CURRICULUM_NODES = [
     iconKey: "crest",
     missionType: "boss-giant",
     missionActionLabel: "Giant’s Armor Plates Cracked",
-    mapPos: { x: 30, y: 34 },
+    mapPos: { x: 30, y: 28 },
     shortDesc: "ACT I BOSS: Crack the Forest Giant's 5 armor plates using Addition, Subtraction, and Number Bonds within 10!",
     teacherGuide: {
       wonder: "The Forest Giant tests whether the young Squire truly understands how Parts and Wholes work across Chapters 1–4—switching flexibly between joining parts (+) and decomposing a whole (−).",
@@ -695,7 +695,7 @@ const CURRICULUM_NODES = [
     iconKey: "loaf",
     missionType: "fort",
     missionActionLabel: "Supply Barges Loaded",
-    mapPos: { x: 36, y: 18 },
+    mapPos: { x: 37, y: 20 },
     shortDesc: "Load 5 royal supply barges by mastering Teen Numbers (11–20) as 1 Full Ten and Loose Ones.",
     teacherGuide: {
       wonder: "Our entire decimal number system rests on grouping by 10! In Dimensions 1A Ch. 5, children discover that 'fourteen' literally means 'four and ten' (1 Ten and 4 Ones)—unlocking place value before they even reach 100.",
@@ -811,7 +811,7 @@ const CURRICULUM_NODES = [
     iconKey: "bridge",
     missionType: "bandits",
     missionActionLabel: "Bridge Raiders Repelled",
-    mapPos: { x: 43, y: 32 },
+    mapPos: { x: 49, y: 28 },
     shortDesc: "Repel 5 River Raiders at the Stone Bridge by bridging through 10 (Make-10 strategy)!",
     teacherGuide: {
       wonder: "Why guess or count on fingers past 10 when you can use the anchor of 10? The signature Singapore 'Make 10' bridge turns hard sums like 8 + 6 into an effortless 10 + 4 = 14!",
@@ -903,7 +903,7 @@ const CURRICULUM_NODES = [
     iconKey: "shieldBronze",
     missionType: "locks",
     missionActionLabel: "Prison Chains Cut",
-    mapPos: { x: 42, y: 54 },
+    mapPos: { x: 49, y: 50 },
     shortDesc: "Cut 5 chains to free the captured squires using Singapore's 'Subtract from 10' strategy!",
     teacherGuide: {
       wonder: "Instead of counting backward one-by-one from 14 or 15 (which is slow and error-prone), Dimensions 1A Ch. 7 uses our knowledge of 10-bonds: take the number straight out of the 10 first, then add the remaining ones!",
@@ -978,7 +978,7 @@ const CURRICULUM_NODES = [
     iconKey: "shieldSilver",
     missionType: "fort",
     missionActionLabel: "Heraldic Shields Crafted",
-    mapPos: { x: 49, y: 68 },
+    mapPos: { x: 52, y: 72 },
     shortDesc: "Craft 5 heraldic shields by counting straight sides, corners (vertices), composite shapes, and patterns!",
     teacherGuide: {
       wonder: "From the 6-sided honeycomb of the bee to the symmetry of crystals, God filled creation with geometric order! In Dimensions 1A Ch. 8, children classify shapes by their straight sides and corners (vertices) and compose new shapes.",
@@ -1100,7 +1100,7 @@ const CURRICULUM_NODES = [
     iconKey: "crown",
     missionType: "bandits",
     missionActionLabel: "Guard Ranks Ordered",
-    mapPos: { x: 55, y: 52 },
+    mapPos: { x: 59, y: 51 },
     shortDesc: "Order 5 ranks of the Royal Guard using ordinal positions (1st, 2nd, 3rd ... 10th) from the Castle Gate!",
     teacherGuide: {
       wonder: "In Creation—from the First Day to the Seventh Day—order and sequence matter! Dimensions 1A Ch. 9 distinguishes cardinal numbers (how many in all) from ordinal numbers (which position in line from a reference point).",
@@ -1185,7 +1185,7 @@ const CURRICULUM_NODES = [
     iconKey: "crest",
     missionType: "boss-serpent",
     missionActionLabel: "Serpent Scales Struck",
-    mapPos: { x: 56, y: 28 },
+    mapPos: { x: 59, y: 24 },
     shortDesc: "ACT II BOSS: Defeat the River Sea-Serpent to crown Semester 1A (Make-10, Subtract-from-10, Shapes & Ordinals)!",
     teacherGuide: {
       wonder: "This Boss Battle crowns Semester 1 (Dimensions 1A Chapters 5–9) by synthesizing Make-10 addition, Subtract-from-10, Geometry, and Ordinals!",
@@ -1310,7 +1310,7 @@ const CURRICULUM_NODES = [
     iconKey: "log",
     missionType: "fort",
     missionActionLabel: "Siege Beams Measured",
-    mapPos: { x: 63, y: 16 },
+    mapPos: { x: 67, y: 15 },
     shortDesc: "Measure 5 royal swords and siege beams by counting non-standard block units end-to-end!",
     teacherGuide: {
       wonder: "Scripture tells us that God 'measured the waters in the hollow of His hand and marked off the heavens with a span' (Isaiah 40:12). In Dimensions 1B Ch. 10, children learn the core principles of honest measurement before using rulers: aligning equal-sized units end-to-end from a common baseline with zero gaps or overlaps!",
@@ -1484,7 +1484,7 @@ const CURRICULUM_NODES = [
     iconKey: "castle",
     missionType: "fort",
     missionActionLabel: "Siege Ladders Raised",
-    mapPos: { x: 66, y: 38 },
+    mapPos: { x: 68, y: 38 },
     shortDesc: "Compare two rows one-to-one ('How many more / fewer?') by subtracting to raise 5 siege ladders!",
     teacherGuide: {
       wonder: "In Dimensions 1B Ch. 11, students compare two quantities one-to-one to see why 'How many more?' and 'How many fewer?' are two ways of asking for the exact same difference (`Greater − Smaller = Difference`).",
@@ -1573,7 +1573,7 @@ const CURRICULUM_NODES = [
     iconKey: "coin",
     missionType: "locks",
     missionActionLabel: "Gold Chests Reclaimed",
-    mapPos: { x: 65, y: 58 },
+    mapPos: { x: 66, y: 60 },
     shortDesc: "Recover 5 chests of stolen gold from the trolls by counting Tens Towers and Loose Ones up to 40.",
     teacherGuide: {
       wonder: "Notice the beauty of our base-ten number system: just ten symbols (0–9) can name any multitude by grouping in Tens! Dimensions 1B Ch. 12 expands beyond 20 to 40 so children master 2 Tens (20), 3 Tens (30), and 4 Tens (40) with loose ones.",
@@ -1711,7 +1711,7 @@ const CURRICULUM_NODES = [
     iconKey: "anvil",
     missionType: "fort",
     missionActionLabel: "Armor Pieces Forged",
-    mapPos: { x: 72, y: 70 },
+    mapPos: { x: 73, y: 74 },
     shortDesc: "Forge 5 pieces of royal armor by adding and subtracting within 40 and bridging to the Next Ten (e.g., 28 + 6)!",
     teacherGuide: {
       wonder: "In 1B Ch. 13, the young Squire sees that the exact same Make-10 truth learned in Chapter 7 works in every decade! Just as 8 + 6 makes 10 + 4 = 14, so 28 + 6 makes 30 + 4 = 34! And in subtraction within 40, we can decompose into Tens and Ones or use a Bar Model.",
@@ -1822,7 +1822,7 @@ const CURRICULUM_NODES = [
     iconKey: "anchor",
     missionType: "ships",
     missionActionLabel: "Pirate Skiffs Sunk",
-    mapPos: { x: 75, y: 52 },
+    mapPos: { x: 78, y: 54 },
     shortDesc: "Sink 5 pirate skiffs by counting Equal Groups (repeated addition, no × symbol) and Fair Sharing!",
     teacherGuide: {
       wonder: "True to Dimensions 1B Ch. 14, we do NOT rush into abstract '×' or '÷' symbols in 1st grade! Instead, children build the concrete intuition of multiplication and division by seeing '3 equal groups of 4' as 4 + 4 + 4 = 12, and sharing items equally across trays.",
@@ -1953,7 +1953,7 @@ const CURRICULUM_NODES = [
     iconKey: "shieldSilver",
     missionType: "fort",
     missionActionLabel: "Royal Banners Divided",
-    mapPos: { x: 75, y: 28 },
+    mapPos: { x: 76, y: 28 },
     shortDesc: "Divide 5 royal shields and banners into Equal Halves (2 equal parts) and Fourths / Quarters (4 equal parts)!",
     teacherGuide: {
       wonder: "In medieval heraldry, shields are divided 'per pale' (in halves) or 'quarterly' (in fourths). Dimensions 1B Ch. 15 introduces fractions visually by emphasizing EQUAL parts: 2 equal parts are Halves, and 4 equal parts are Fourths (or Quarters).",
@@ -2074,7 +2074,7 @@ const CURRICULUM_NODES = [
     iconKey: "crest",
     missionType: "boss-golem",
     missionActionLabel: "Golem Shields Shattered",
-    mapPos: { x: 82, y: 42 },
+    mapPos: { x: 83, y: 40 },
     shortDesc: "ACT III BOSS: Shatter the Iron Golem using Regrouping to 40, Equal Groups, Length, and Fractions!",
     teacherGuide: {
       wonder: "The Iron Golem tests all of Act III (Dimensions 1B Chapters 10–15): Length/Comparison, Place Value & Regrouping to 40, Equal Groups, and Halves/Fourths.",
@@ -2173,7 +2173,7 @@ const CURRICULUM_NODES = [
     iconKey: "lantern",
     missionType: "fort",
     missionActionLabel: "Signal Beacons Lit",
-    mapPos: { x: 83, y: 63 },
+    mapPos: { x: 84, y: 64 },
     shortDesc: "Ignite 5 mountain signal beacons by counting Tens Towers and Loose Ones all the way to 100!",
     teacherGuide: {
       wonder: "Psalm 147:4 says the Lord 'determines the number of the stars; He gives to all of them their names.' Dimensions 1B Ch. 16 extends place value all the way to 100 (10 Tens = 100), showing how large numbers remain simple and orderly when grouped by Tens.",
@@ -2314,7 +2314,7 @@ const CURRICULUM_NODES = [
     iconKey: "sword",
     missionType: "bandits",
     missionActionLabel: "Shadow Guards Defeated",
-    mapPos: { x: 90, y: 70 },
+    mapPos: { x: 91, y: 72 },
     shortDesc: "Overcome 5 Shadow Guards on the ramparts by adding and subtracting two-digit numbers within 100!",
     teacherGuide: {
       wonder: "In 1B Ch. 17, students add and subtract two-digit numbers up to 100 by uniting Tens with Tens and Ones with Ones, and by reading Part-Whole Bar Models!",
@@ -2406,7 +2406,7 @@ const CURRICULUM_NODES = [
     iconKey: "clock",
     missionType: "fort",
     missionActionLabel: "Watchtower Bells Rung",
-    mapPos: { x: 92, y: 54 },
+    mapPos: { x: 93, y: 52 },
     shortDesc: "Ring 5 watchtower bells by reading the Hour Hand and Minute Hand for O'Clock (:00) and Half-Past (:30)!",
     teacherGuide: {
       wonder: "In Genesis 1:14, God placed the lights in the heavens 'for signs and for seasons, and for days and years.' Dimensions 1B Ch. 18 teaches children to steward time by reading analog and digital clocks to the hour (minute hand at 12) and half-hour (minute hand at 6, hour hand halfway past the hour).",
@@ -2506,7 +2506,7 @@ const CURRICULUM_NODES = [
     iconKey: "coin",
     missionType: "locks",
     missionActionLabel: "Treasury Vaults Opened",
-    mapPos: { x: 91, y: 32 },
+    mapPos: { x: 92, y: 32 },
     shortDesc: "Open 5 royal treasury vaults by counting Pennies (1¢), Nickels (5¢), Dimes (10¢), and Quarters (25¢)!",
     teacherGuide: {
       wonder: "Proverbs 16:11 reminds us that 'A just balance and scales are the Lord's; all the weights in the bag are His work.' Dimensions 1B Ch. 19 culminates Grade 1 by applying skip-counting (by 10s, 5s, and 1s) and place-value addition to real coins!",
@@ -2622,7 +2622,7 @@ const CURRICULUM_NODES = [
     iconKey: "crown",
     missionType: "boss-dragon",
     missionActionLabel: "Dragon Health Struck",
-    mapPos: { x: 90, y: 12 },
+    mapPos: { x: 90, y: 15 },
     shortDesc: "FINAL GRADE 1 BOSS: Strike the Red Dragon 5 times across all 19 chapters of Dimensions Grade 1 to win the Crown!",
     teacherGuide: {
       wonder: "Soli Deo Gloria! The Red Dragon tests the full breadth of Dimensions Grade 1 (Chapters 1–19): Make-10, Subtract-from-10, Regrouping to the Next Ten, Two-Digit Numbers to 100, Time, and Money!",

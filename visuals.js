@@ -485,155 +485,198 @@ const Visuals = {
   },
 
   // --------------------------------------------------------------------------
-  // 6. ILLUSTRATED KINGDOM OVERWORLD MAP SVG (4 Lush Biomes & Classical Cartouche)
+  // 6. ILLUSTRATED KINGDOM OVERWORLD MAP SVG (Smooth Spline, River Crossing, Landmarks)
   // --------------------------------------------------------------------------
   renderKingdomMapSVG(nodes) {
-    const points = nodes.map(n => ({
+    const nodePts = nodes.map(n => ({
       x: (n.mapPos.x / 100) * 1200,
       y: (n.mapPos.y / 100) * 650
     }));
 
-    let pathD = `M ${points[0].x} ${points[0].y}`;
-    for (let i = 1; i < points.length; i++) {
-      const prev = points[i - 1];
-      const curr = points[i];
-      const midX = (prev.x + curr.x) / 2;
-      const midY = (prev.y + curr.y) / 2 - (i % 2 === 0 ? 18 : -18);
-      pathD += ` Q ${midX} ${midY}, ${curr.x} ${curr.y}`;
+    // Route the King's Highway cleanly across Stoneholm Bridge between Node 6 and Node 7
+    const roadPts = [];
+    nodePts.forEach((pt, idx) => {
+      roadPts.push(pt);
+      if (idx === 5) {
+        roadPts.push({ x: 504, y: 158 });
+      }
+    });
+
+    // Smooth Catmull-Rom to Cubic Bezier path (zero harsh zig-zag kinks)
+    let pathD = `M ${roadPts[0].x.toFixed(1)} ${roadPts[0].y.toFixed(1)}`;
+    for (let i = 0; i < roadPts.length - 1; i++) {
+      const p0 = roadPts[Math.max(0, i - 1)];
+      const p1 = roadPts[i];
+      const p2 = roadPts[i + 1];
+      const p3 = roadPts[Math.min(roadPts.length - 1, i + 2)];
+      const cp1x = p1.x + (p2.x - p0.x) / 6;
+      const cp1y = p1.y + (p2.y - p0.y) / 6;
+      const cp2x = p2.x - (p3.x - p1.x) / 6;
+      const cp2y = p2.y - (p3.y - p1.y) / 6;
+      pathD += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
     }
 
-    return `<svg viewBox="0 0 1200 650" preserveAspectRatio="none">
+    const riverD = "M 472 -15 C 505 85, 515 160, 492 260 C 470 355, 518 450, 502 555 C 492 610, 476 645, 468 665";
+
+    return `<svg viewBox="0 0 1200 650" preserveAspectRatio="xMidYMid meet">
       <defs>
         <radialGradient id="parchmentGlow" cx="48%" cy="46%" r="68%">
-          <stop offset="0%" stop-color="#FCF6E8"/>
-          <stop offset="58%" stop-color="#EFE0C2"/>
-          <stop offset="100%" stop-color="#D4BE94"/>
+          <stop offset="0%" stop-color="#FDF7EA"/>
+          <stop offset="62%" stop-color="#F0E2C5"/>
+          <stop offset="100%" stop-color="#D9C398"/>
         </radialGradient>
         <linearGradient id="riverGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="#89C4E1"/>
-          <stop offset="50%" stop-color="#4F8FB8"/>
-          <stop offset="100%" stop-color="#2E648C"/>
+          <stop offset="0%" stop-color="#87C3DE"/>
+          <stop offset="50%" stop-color="#4B8AB4"/>
+          <stop offset="100%" stop-color="#2D6288"/>
         </linearGradient>
-        <radialGradient id="forestBiome" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stop-color="#6DA362" stop-opacity="0.38"/>
-          <stop offset="100%" stop-color="#6DA362" stop-opacity="0"/>
+        <radialGradient id="forestBiome" cx="50%" cy="50%" r="55%">
+          <stop offset="0%" stop-color="#76AA68" stop-opacity="0.28"/>
+          <stop offset="100%" stop-color="#76AA68" stop-opacity="0"/>
         </radialGradient>
-        <radialGradient id="highlandBiome" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stop-color="#C89D66" stop-opacity="0.34"/>
-          <stop offset="100%" stop-color="#C89D66" stop-opacity="0"/>
+        <radialGradient id="highlandBiome" cx="50%" cy="50%" r="55%">
+          <stop offset="0%" stop-color="#C89E68" stop-opacity="0.24"/>
+          <stop offset="100%" stop-color="#C89E68" stop-opacity="0"/>
         </radialGradient>
-        <radialGradient id="dragonBiome" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stop-color="#D96B43" stop-opacity="0.28"/>
-          <stop offset="100%" stop-color="#D96B43" stop-opacity="0"/>
+        <radialGradient id="dragonBiome" cx="50%" cy="50%" r="55%">
+          <stop offset="0%" stop-color="#D1744B" stop-opacity="0.22"/>
+          <stop offset="100%" stop-color="#D1744B" stop-opacity="0"/>
         </radialGradient>
       </defs>
 
-      <!-- Warm Illuminated Parchment Base -->
+      <!-- Illuminated Parchment Base -->
       <rect width="1200" height="650" fill="url(#parchmentGlow)"/>
 
-      <!-- Subtle Cartographic Grid & Rhumb Lines -->
-      <g stroke="#B89F74" stroke-width="0.7" opacity="0.32">
+      <!-- Subtle Cartographic Grid Lines -->
+      <g stroke="#B89F74" stroke-width="0.6" opacity="0.2">
         <line x1="0" y1="162" x2="1200" y2="162"/>
         <line x1="0" y1="325" x2="1200" y2="325"/>
         <line x1="0" y1="487" x2="1200" y2="487"/>
         <line x1="300" y1="0" x2="300" y2="650"/>
         <line x1="600" y1="0" x2="600" y2="650"/>
         <line x1="900" y1="0" x2="900" y2="650"/>
-        <line x1="88" y1="240" x2="900" y2="80"/>
-        <line x1="88" y1="240" x2="900" y2="520"/>
       </g>
 
-      <!-- 4 Biome Region Glows -->
-      <ellipse cx="205" cy="445" rx="255" ry="200" fill="url(#forestBiome)"/>
-      <ellipse cx="485" cy="340" rx="235" ry="240" fill="url(#highlandBiome)"/>
-      <ellipse cx="730" cy="340" rx="230" ry="250" fill="url(#highlandBiome)"/>
-      <ellipse cx="1015" cy="280" rx="240" ry="260" fill="url(#dragonBiome)"/>
+      <!-- Soft Organic Biome Washes -->
+      <path d="M 35 230 Q 175 145 360 220 Q 430 390 365 565 Q 190 615 45 535 Z" fill="url(#forestBiome)"/>
+      <path d="M 555 110 Q 730 85 885 160 Q 950 350 865 535 Q 690 580 545 495 Z" fill="url(#highlandBiome)"/>
+      <path d="M 920 65 Q 1085 45 1175 160 Q 1190 385 1135 555 Q 995 575 930 430 Z" fill="url(#dragonBiome)"/>
 
-      <!-- The Great River of Twenty (With Banks & Shimmering Ripples) -->
-      <path d="M 465 -15 C 480 95, 575 140, 545 255 C 515 365, 600 445, 555 565 C 535 615, 515 645, 505 665"
-            fill="none" stroke="#C2AB82" stroke-width="52" stroke-linecap="round"/>
-      <path d="M 465 -15 C 480 95, 575 140, 545 255 C 515 365, 600 445, 555 565 C 535 615, 515 645, 505 665"
-            fill="none" stroke="url(#riverGrad)" stroke-width="38" stroke-linecap="round"/>
-      <path d="M 465 -15 C 480 95, 575 140, 545 255 C 515 365, 600 445, 555 565"
-            fill="none" stroke="#CBE9F7" stroke-width="3" stroke-dasharray="14,18" stroke-linecap="round" opacity="0.75"/>
+      <!-- Region Cartographic Labels (Directly on Map Parchment) -->
+      <text x="215" y="54" text-anchor="middle" font-family="Palatino, Georgia, serif" font-size="16" font-style="italic" font-weight="700" fill="#2E593D" opacity="0.82">I · Forest of Ten</text>
+      <text x="605" y="54" text-anchor="middle" font-family="Palatino, Georgia, serif" font-size="16" font-style="italic" font-weight="700" fill="#234F7D" opacity="0.82">II · River of Twenty</text>
+      <text x="820" y="50" text-anchor="middle" font-family="Palatino, Georgia, serif" font-size="16" font-style="italic" font-weight="700" fill="#7D4918" opacity="0.82">III · Highland Strongholds</text>
+      <text x="1072" y="608" text-anchor="middle" font-family="Palatino, Georgia, serif" font-size="16" font-style="italic" font-weight="700" fill="#8C2323" opacity="0.85">IV · Citadel to 100</text>
 
-      <!-- Highland Cove & Pirate Waters (Bottom Right Inlet) -->
-      <path d="M 720 650 Q 755 540 825 585 L 860 650 Z" fill="url(#riverGrad)" opacity="0.65"/>
-
-      <!-- Multi-Faceted Snow-Capped Mountains (West & East Ranges) -->
-      <g stroke="#3E3225" stroke-width="1.8" stroke-linejoin="round">
-        <!-- Western Foothills -->
-        <polygon points="105,180 155,88 205,180" fill="#D5C2A3"/>
-        <polygon points="155,88 180,180 205,180" fill="#B59F7E"/>
-        <polygon points="155,88 140,116 155,110 170,118" fill="#FFFDF9"/>
-
-        <polygon points="168,190 230,74 292,190" fill="#DFC09B"/>
-        <polygon points="230,74 260,190 292,190" fill="#B89B74"/>
-        <polygon points="230,74 210,110 228,102 248,112" fill="#FFFDF9"/>
-
-        <!-- Highland Stronghold Peaks (Act III) -->
-        <polygon points="645,145 700,45 755,145" fill="#D8C4A3"/>
-        <polygon points="700,45 728,145 755,145" fill="#B29B78"/>
-        <polygon points="700,45 682,78 700,72 718,80" fill="#FFFDF9"/>
-
-        <!-- Dragon's Mountain Range (Act IV) -->
-        <polygon points="885,155 950,34 1015,155" fill="#C9A882"/>
-        <polygon points="950,34 985,155 1015,155" fill="#9E7E5B"/>
-        <polygon points="950,34 930,72 950,65 970,74" fill="#FFE8BA"/>
+      <!-- The Great River of Twenty (Layered Banks + Natural Flowing Water Ripples) -->
+      <path d="${riverD}" fill="none" stroke="#CBB58A" stroke-width="54" stroke-linecap="round"/>
+      <path d="${riverD}" fill="none" stroke="#85B9D6" stroke-width="40" stroke-linecap="round"/>
+      <path d="${riverD}" fill="none" stroke="url(#riverGrad)" stroke-width="34" stroke-linecap="round"/>
+      <g fill="none" stroke="#D8F0FB" stroke-width="1.8" stroke-linecap="round" opacity="0.72">
+        <path d="M 476 26 Q 486 58 492 86"/>
+        <path d="M 498 188 Q 490 226 484 260"/>
+        <path d="M 478 295 Q 482 332 490 368"/>
+        <path d="M 498 408 Q 508 446 504 484"/>
+        <path d="M 496 522 Q 488 564 476 604"/>
       </g>
 
-      <!-- Stoneholm Multi-Arch Bridge across the Great River -->
-      <g transform="translate(495, 208)" stroke="#2C2219" stroke-width="1.8">
-        <rect x="0" y="8" width="76" height="24" rx="4" fill="#C8BEB0"/>
-        <rect x="4" y="2" width="12" height="8" fill="#DFD7CA"/>
-        <rect x="60" y="2" width="12" height="8" fill="#DFD7CA"/>
-        <path d="M12 32 A 11 11 0 0 1 34 32 M42 32 A 11 11 0 0 1 64 32" fill="#2E648C"/>
+      <!-- Supply Barge & Timber Dock on West Bank (Near Node 6) -->
+      <g transform="translate(454, 114)" stroke="#2C2219" stroke-width="1.3">
+        <rect x="-4" y="6" width="22" height="7" rx="1.5" fill="#9E6B3B"/>
+        <line x1="2" y1="6" x2="2" y2="16" stroke="#5A3921" stroke-width="2"/>
+        <line x1="12" y1="6" x2="12" y2="16" stroke="#5A3921" stroke-width="2"/>
+        <polygon points="18,10 38,10 34,19 22,19" fill="#7C4D28"/>
+        <rect x="23" y="5" width="9" height="5" rx="1" fill="#E5C794"/>
       </g>
 
-      <!-- Lush Layered Woodland Groves (Pines & Ancient Oaks) -->
-      <g stroke="#1E3522" stroke-width="1.5">
-        <!-- Grove 1 -->
-        <polygon points="65,455 82,412 99,455" fill="#2E693E"/>
-        <polygon points="88,462 108,410 128,462" fill="#3D824F"/>
-        <polygon points="115,458 132,418 149,458" fill="#2E693E"/>
-        <!-- Grove 2 -->
-        <circle cx="285" cy="465" r="18" fill="#357344"/>
-        <circle cx="308" cy="456" r="22" fill="#468C56"/>
-        <circle cx="328" cy="468" r="16" fill="#2E693E"/>
-        <!-- Grove 3 -->
-        <polygon points="365,285 382,242 399,285" fill="#2E693E"/>
-        <polygon points="388,292 408,238 428,292" fill="#468C56"/>
-        <!-- Grove 4 (Highland Pines) -->
-        <polygon points="795,255 812,212 829,255" fill="#2E693E"/>
-        <polygon points="818,262 838,208 858,262" fill="#3D824F"/>
+      <!-- Highland Cove & Pirate Waters (Bottom Right Inlet, Clear Below Node 15) -->
+      <path d="M 760 650 Q 805 568 880 578 Q 945 588 972 650 Z" fill="#CBB58A"/>
+      <path d="M 774 650 Q 815 580 882 590 Q 936 598 960 650 Z" fill="url(#riverGrad)" opacity="0.82"/>
+      <path d="M 812 622 Q 852 606 896 620" fill="none" stroke="#D8F0FB" stroke-width="1.6" stroke-linecap="round" opacity="0.7"/>
+      <!-- Anchored Pirate Skiff in Cove -->
+      <g transform="translate(866, 594)" stroke="#1E1812" stroke-width="1.3" stroke-linejoin="round">
+        <polygon points="10,0 10,16 20,13" fill="#982B2B"/>
+        <polygon points="10,2 10,14 2,13" fill="#F5E9CE"/>
+        <polygon points="1,17 21,17 17,23 5,23" fill="#6E4726"/>
       </g>
 
-      <!-- Grand Royal Citadel & Cathedral Spires (Top Right) -->
-      <g transform="translate(1025, 42)" stroke="#1E1812" stroke-width="1.8" stroke-linejoin="round">
-        <rect x="16" y="34" width="76" height="50" fill="#F2E5C9"/>
-        <rect x="4" y="18" width="24" height="66" fill="#E2D0AC"/>
-        <rect x="80" y="18" width="24" height="66" fill="#E2D0AC"/>
-        <rect x="38" y="12" width="32" height="72" fill="#FAF0DA"/>
-        <polygon points="1,18 16,0 31,18" fill="#982B2B"/>
-        <polygon points="77,18 92,0 107,18" fill="#982B2B"/>
-        <polygon points="34,12 54,-12 74,12" fill="#173156"/>
-        <circle cx="54" cy="32" r="8" fill="#F0C445"/>
-        <path d="M44 84 L44 56 A10 10 0 0 1 64 56 L64 84 Z" fill="#5A3921"/>
+      <!-- Layered Storybook Mountain Ridges -->
+      <g stroke="#4A3B2B" stroke-width="1.5" stroke-linejoin="round">
+        <!-- Western Peaks (North of Act I) -->
+        <path d="M 135 168 L 178 96 L 214 140 L 256 72 L 308 168 Z" fill="#D8C5A6"/>
+        <path d="M 178 96 L 194 168 L 214 140 Z" fill="#B59F7E"/>
+        <path d="M 256 72 L 278 168 L 308 168 Z" fill="#B59F7E"/>
+        <path d="M 178 96 L 164 120 L 178 114 L 190 121 Z" fill="#FFFDF8"/>
+        <path d="M 256 72 L 238 104 L 255 97 L 273 106 Z" fill="#FFFDF8"/>
+
+        <!-- Highland Crags (Act III North) -->
+        <path d="M 690 132 L 732 68 L 764 108 L 802 58 L 848 132 Z" fill="#D5C09F"/>
+        <path d="M 732 68 L 748 132 L 764 108 Z" fill="#AE9774"/>
+        <path d="M 802 58 L 822 132 L 848 132 Z" fill="#AE9774"/>
+        <path d="M 802 58 L 787 84 L 802 78 L 816 86 Z" fill="#FFFDF8"/>
+
+        <!-- Dragon's Peak (Framing Left of Node 23) -->
+        <path d="M 902 142 L 948 56 L 976 96 L 1006 40 L 1048 142 Z" fill="#C4A07B"/>
+        <path d="M 1006 40 L 1024 142 L 1048 142 Z" fill="#9A7856"/>
+        <path d="M 1006 40 L 990 70 L 1006 64 L 1020 72 Z" fill="#FFE8BC"/>
+        <path d="M 1008 35 Q 1018 22 1010 14 Q 1022 10 1030 4" fill="none" stroke="#8C7B68" stroke-width="1.6" stroke-linecap="round" opacity="0.55"/>
       </g>
 
-      <!-- Ornate Compass Rose -->
-      <g transform="translate(76, 255)">
-        <circle cx="0" cy="0" r="38" fill="#FDF9F0" stroke="#8C6D46" stroke-width="2.2"/>
-        <circle cx="0" cy="0" r="31" fill="none" stroke="#C69722" stroke-width="1" stroke-dasharray="3,3"/>
-        <polygon points="0,-34 7,-7 34,0 7,7 0,34 -7,7 -34,0 -7,-7" fill="#173156" stroke="#C69722" stroke-width="1.4"/>
-        <polygon points="0,-34 0,0 7,-7" fill="#F0C445"/>
-        <text x="0" y="-41" text-anchor="middle" font-family="Cinzel, serif" font-size="13" font-weight="800" fill="#173156">N</text>
+      <!-- Grand Royal Citadel (Framed Right of Node 23) -->
+      <g transform="translate(1118, 28)" stroke="#1E1812" stroke-width="1.6" stroke-linejoin="round">
+        <rect x="10" y="28" width="52" height="44" fill="#F2E5C9"/>
+        <rect x="2" y="16" width="16" height="56" fill="#E2D0AC"/>
+        <rect x="54" y="16" width="16" height="56" fill="#E2D0AC"/>
+        <rect x="25" y="10" width="22" height="62" fill="#FAF0DA"/>
+        <polygon points="0,16 10,2 20,16" fill="#982B2B"/>
+        <polygon points="52,16 62,2 72,16" fill="#982B2B"/>
+        <polygon points="22,10 36,-8 50,10" fill="#173156"/>
+        <circle cx="36" cy="26" r="5" fill="#F0C445"/>
+        <path d="M30 72 L30 50 A6 6 0 0 1 42 50 L42 72 Z" fill="#5A3921"/>
       </g>
 
-      <!-- The King's Highway (Dimensional Cobblestone Road & Golden Trail) -->
-      <path d="${pathD}" fill="none" stroke="#6E5536" stroke-width="18" stroke-linecap="round" opacity="0.5"/>
-      <path d="${pathD}" fill="none" stroke="#FAF1DC" stroke-width="11" stroke-linecap="round"/>
-      <path d="${pathD}" fill="none" stroke="#C69722" stroke-width="3.5" stroke-dasharray="9,10" stroke-linecap="round"/>
+      <!-- Storybook Woodland Groves (Clear of Pins) -->
+      <g stroke="#1E3522" stroke-width="1.3" stroke-linejoin="round">
+        <!-- West Pines -->
+        <polygon points="52,320 66,284 80,320" fill="#2E693E"/>
+        <polygon points="72,328 89,282 106,328" fill="#3D824F"/>
+        <polygon points="96,324 110,290 124,324" fill="#2E693E"/>
+        <!-- Southern Oaks -->
+        <path d="M 155 572 Q 145 552 162 544 Q 176 530 192 544 Q 208 552 198 572 Z" fill="#3E804C"/>
+        <path d="M 192 578 Q 186 562 200 556 Q 214 548 224 560 Q 232 568 224 578 Z" fill="#2F6A3D"/>
+        <!-- Eastern Forest Edge -->
+        <polygon points="348,432 362,396 376,432" fill="#2E693E"/>
+        <polygon points="368,438 384,394 400,438" fill="#468C56"/>
+        <!-- Highland Pines -->
+        <polygon points="712,256 726,220 740,256" fill="#2E693E"/>
+        <polygon points="732,262 748,218 764,262" fill="#3D824F"/>
+        <polygon points="840,214 853,182 866,214" fill="#2E693E"/>
+      </g>
+
+      <!-- The King's Highway (Smooth Spline Crossing Only Over Stoneholm Bridge) -->
+      <path d="${pathD}" fill="none" stroke="#7A5F3D" stroke-width="15" stroke-linecap="round" opacity="0.42"/>
+      <path d="${pathD}" fill="none" stroke="#FBF2DE" stroke-width="9.5" stroke-linecap="round"/>
+      <path d="${pathD}" fill="none" stroke="#C69722" stroke-width="2.4" stroke-linecap="round" opacity="0.62"/>
+
+      <!-- Stoneholm Multi-Arch Bridge (Rendered Over River & Framing the Highway Crossing) -->
+      <g transform="translate(466, 138)" stroke="#2C2219" stroke-width="1.6" stroke-linejoin="round">
+        <rect x="0" y="8" width="76" height="24" rx="4" fill="#CFC4B4"/>
+        <rect x="4" y="2" width="12" height="7" fill="#E3DACB"/>
+        <rect x="32" y="2" width="12" height="7" fill="#E3DACB"/>
+        <rect x="60" y="2" width="12" height="7" fill="#E3DACB"/>
+        <path d="M 8 18 L 68 18" stroke="#FBF2DE" stroke-width="6" stroke-linecap="round"/>
+        <path d="M 8 18 L 68 18" stroke="#C69722" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+        <path d="M12 32 A 10 10 0 0 1 32 32 M44 32 A 10 10 0 0 1 64 32" fill="#2D6288"/>
+      </g>
+
+      <!-- Ornate Compass Rose (Top-Left Open Parchment) -->
+      <g transform="translate(72, 102)">
+        <circle cx="0" cy="0" r="34" fill="#FDF9F0" stroke="#8C6D46" stroke-width="2"/>
+        <circle cx="0" cy="0" r="28" fill="none" stroke="#C69722" stroke-width="1" opacity="0.7"/>
+        <polygon points="0,-30 6,-6 30,0 6,6 0,30 -6,6 -30,0 -6,-6" fill="#173156" stroke="#C69722" stroke-width="1.3"/>
+        <polygon points="0,-30 0,0 6,-6" fill="#F0C445"/>
+        <text x="0" y="-37" text-anchor="middle" font-family="Palatino, Georgia, serif" font-size="12" font-weight="800" fill="#173156">N</text>
+      </g>
     </svg>`;
   },
 
@@ -859,9 +902,9 @@ const Visuals = {
     for (let i = 0; i < bottomCount; i++) {
       const cx = startX + i * stepX;
       itemsSVG += `
-        <line x1="${cx}" y1="62" x2="${cx}" y2="96" stroke="#766756" stroke-width="2.5" stroke-dasharray="4,4"/>
-        <rect x="${cx - 21}" y="98" width="42" height="42" rx="9" fill="#FDF4EB" stroke="#B85D19" stroke-width="2.6"/>
-        <circle cx="${cx}" cy="119" r="7" fill="#B85D19" opacity="0.75"/>
+        <line x1="${cx}" y1="62" x2="${cx}" y2="116" stroke="#766756" stroke-width="2.5" stroke-dasharray="4,4"/>
+        <rect x="${cx - 21}" y="118" width="42" height="42" rx="9" fill="#FDF4EB" stroke="#B85D19" stroke-width="2.6"/>
+        <circle cx="${cx}" cy="139" r="7" fill="#B85D19" opacity="0.75"/>
       `;
     }
 
@@ -870,9 +913,9 @@ const Visuals = {
     const bracketMid = (bracketX1 + bracketX2) / 2;
 
     return `
-      <svg width="690" height="165" viewBox="0 0 690 165" style="max-width:100%;">
+      <svg width="700" height="178" viewBox="0 0 700 178" style="max-width:100%;">
         <text x="122" y="45" text-anchor="end" font-family="Plus Jakarta Sans, sans-serif" font-size="16" font-weight="800" fill="#24578D">${topLabel}</text>
-        <text x="122" y="125" text-anchor="end" font-family="Plus Jakarta Sans, sans-serif" font-size="16" font-weight="800" fill="#B85D19">${bottomLabel}</text>
+        <text x="122" y="145" text-anchor="end" font-family="Plus Jakarta Sans, sans-serif" font-size="16" font-weight="800" fill="#B85D19">${bottomLabel}</text>
         ${itemsSVG}
         <path d="M ${bracketX1} 68 L ${bracketX1} 80 L ${bracketX2} 80 L ${bracketX2} 68" fill="none" stroke="#982B2B" stroke-width="3"/>
         <text x="${bracketMid}" y="102" text-anchor="middle" font-family="Plus Jakarta Sans, sans-serif" font-size="16" font-weight="800" fill="#982B2B">Difference: ?</text>
@@ -1078,7 +1121,7 @@ const Visuals = {
 
     return `
       <div style="display:flex;align-items:center;justify-content:center;gap:48px;flex-wrap:wrap;">
-        <div style="display:flex;align-items:flex-end;gap:32px;background:#FAF6EC;padding:18px 28px;border-radius:12px;border:2px solid #C8B289;">
+        <div style="display:flex;align-items:flex-end;gap:32px;padding:8px 12px;">
           <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
             <div style="display:flex;gap:8px;align-items:flex-end;">${towersHTML}</div>
             <span style="font-family:var(--font-sans);font-size:17px;font-weight:800;color:#24578D;">${tensBottomLabel}</span>
@@ -1203,7 +1246,7 @@ const Visuals = {
     return `
       <div style="display:flex;align-items:center;justify-content:center;gap:42px;flex-wrap:wrap;">
         <!-- Left: Pictorial Ten-Towers + Ten-Frame making the Next Ten -->
-        <div style="display:flex;align-items:center;gap:20px;background:#FAF6EC;padding:14px 22px;border-radius:12px;border:2px solid #C8B289;">
+        <div style="display:flex;align-items:center;gap:20px;padding:6px 10px;">
           <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
             <div style="display:flex;gap:6px;align-items:flex-end;">${towersHTML}</div>
             <span style="font-family:var(--font-sans);font-size:18px;font-weight:800;color:#24578D;">${aTens * 10}</span>
@@ -1268,7 +1311,7 @@ const Visuals = {
           <div style="background:#FAF6EC;border:3px solid #1B365D;border-radius:14px;padding:14px 18px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;min-width:125px;">
             ${itemsHTML}
           </div>
-          <span style="font-family:var(--font-sans);font-size:15px;font-weight:800;color:#1B365D;background:#EEF4FA;padding:3px 12px;border-radius:99px;">
+          <span style="font-family:var(--font-sans);font-size:14.5px;font-weight:800;color:#1B365D;background:#FDFBF5;border:1.5px solid #C8B289;padding:3px 12px;border-radius:6px;">
             ${badgeLabel}
           </span>
         </div>
@@ -1428,7 +1471,7 @@ const Visuals = {
 
     if (lengthB !== null) {
       return `
-        <div style="display:flex;flex-direction:column;align-items:flex-start;gap:16px;background:#FAF6EC;padding:16px 26px;border-radius:12px;border:2px solid #C8B289;">
+        <div style="display:flex;flex-direction:column;align-items:flex-start;gap:16px;padding:8px 14px;">
           ${renderBarAndUnits(lengthA, "#24578D", "Sword A", 0)}
           ${renderBarAndUnits(lengthB, "#B85D19", "Sword B", 0)}
         </div>
@@ -1436,7 +1479,7 @@ const Visuals = {
     }
 
     return `
-      <div style="display:flex;flex-direction:column;align-items:flex-start;background:#FAF6EC;padding:20px 30px;border-radius:12px;border:2px solid #C8B289;">
+      <div style="display:flex;flex-direction:column;align-items:flex-start;padding:8px 14px;">
         ${renderBarAndUnits(lengthA, "#24578D", labelA, offsetA)}
       </div>
     `;
@@ -1581,7 +1624,7 @@ const Visuals = {
     });
 
     return `
-      <div style="display:flex;align-items:center;justify-content:center;gap:18px;flex-wrap:wrap;background:#FAF6EC;padding:18px 28px;border-radius:14px;border:2.5px solid #C8B289;">
+      <div style="display:flex;align-items:center;justify-content:center;gap:18px;flex-wrap:wrap;padding:8px 14px;">
         ${coinsHTML}
       </div>
     `;
