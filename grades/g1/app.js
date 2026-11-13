@@ -292,69 +292,459 @@ const App = {
     return Visuals.getIconSVG(node.iconKey, size);
   },
 
+  MAP_REALMS: {
+    all: { scale: 1, cx: 50, cy: 50 },
+    "1": { scale: 1.64, cx: 18, cy: 48 },
+    "2": { scale: 1.62, cx: 44, cy: 50 },
+    "3": { scale: 1.62, cx: 73, cy: 48 },
+    "4": { scale: 1.68, cx: 89, cy: 44 },
+  },
+
+  ensureMapState() {
+    if (!this.cameraState) {
+      this.cameraState = {
+        scale: 1,
+        tx: 0,
+        ty: 0,
+        activeRealm: "all",
+        isDragging: false,
+        dragMoved: false,
+        dragStartX: 0,
+        dragStartY: 0,
+        startTx: 0,
+        startTy: 0,
+        compassDeg: 0,
+      };
+    }
+    if (!this._pinButtons) this._pinButtons = {};
+  },
+
   renderMapAll() {
+    this.ensureMapState();
+    this.mountMapScene();
+    this.syncMapState();
+    if (typeof KingdomAtmosphere !== "undefined" && KingdomAtmosphere.setActive) {
+      KingdomAtmosphere.setActive(this.state.currentView === "map");
+    }
+    this.positionSquireToken(this.state.squireNodeId || this.state.selectedNodeId, false);
+    this.applyMapCamera(false);
+  },
+
+  mountMapScene() {
+    if (this._mapMounted) return;
+    this._mapMounted = true;
+
+    this.highwayData = Visuals.buildHighwayData(CURRICULUM_NODES);
+
     const svgContainer = document.getElementById("svg-map-container");
-    svgContainer.innerHTML = Visuals.renderKingdomMapSVG(CURRICULUM_NODES);
+    if (svgContainer) {
+      svgContainer.innerHTML = Visuals.renderKingdomMapSVG(CURRICULUM_NODES, this.state.progress || {});
+    }
+
+    const grainEl = document.getElementById("map-vellum-grain");
+    if (grainEl && typeof Visuals.getVellumPatternDataURL === "function") {
+      const patternUrl = Visuals.getVellumPatternDataURL();
+      if (patternUrl) {
+        grainEl.style.backgroundImage = `url(${patternUrl})`;
+      }
+    }
+
+    const beaconsLit =
+      !!(this.getProgress(19).mastered) ||
+      !!(this.getProgress(18).mastered);
+    const canvasEl = document.getElementById("map-atmosphere-canvas");
+    if (typeof KingdomAtmosphere !== "undefined" && canvasEl) {
+      KingdomAtmosphere.init(canvasEl, {
+        beaconsLit,
+        active: this.state.currentView === "map",
+      });
+    }
 
     const overlay = document.getElementById("map-nodes-overlay");
-    overlay.innerHTML = "";
+    if (overlay) {
+      overlay.innerHTML = "";
+      this._pinButtons = {};
 
-    const nextQuestNode = CURRICULUM_NODES.find(n => !this.getProgress(n.id).mastered);
+      CURRICULUM_NODES.forEach((node) => {
+        const pin = document.createElement("button");
+        pin.type = "button";
+        pin.className = `map-node-pin act-${node.act || 1}`;
+        pin.setAttribute("aria-label", `Mission ${node.id}: ${node.title}`);
+        if (node.isBoss) pin.classList.add("boss-node");
+        if (node.id === 23) pin.classList.add("final-boss-node");
+        if (node.mapPos.y >= 65) pin.classList.add("label-above");
+
+        pin.style.left = `${node.mapPos.x}%`;
+        pin.style.top = `${node.mapPos.y}%`;
+
+        const pinGraphic = this.getNodeIconSVG(node, node.isBoss ? 28 : 24);
+        const bossPlate = node.isBoss
+          ? `<span class="node-boss-plate">${node.id === 23 ? "FINAL BOSS" : "BOSS"}</span>`
+          : "";
+        pin.innerHTML = `
+          <div class="node-ground-shadow"></div>
+          <div class="node-stars-arc"></div>
+          <div class="node-medallion">
+            <span class="node-num-badge">${node.id}</span>
+            <div style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;">${pinGraphic}</div>
+            <span class="node-seal-crown"></span>
+          </div>
+          ${bossPlate}
+          <div class="node-label-plate">${node.id}. ${node.title}</div>
+        `;
+
+        pin.addEventListener("click", () => {
+          if (this.cameraState && this.cameraState.dragMoved) return;
+          if (this.state.selectedNodeId === node.id) {
+            this.zoomIntoStronghold(node.id);
+          } else {
+            this.selectMapNode(node.id);
+          }
+        });
+
+        overlay.appendChild(pin);
+        this._pinButtons[node.id] = pin;
+      });
+    }
+
+    this.bindMapInteractions();
+  },
+
+  syncMapState() {
+    const nextQuestNode = CURRICULUM_NODES.find((n) => !this.getProgress(n.id).mastered);
     const nextQuestId = nextQuestNode ? nextQuestNode.id : null;
 
-    CURRICULUM_NODES.forEach(node => {
+    CURRICULUM_NODES.forEach((node) => {
+      const pin = this._pinButtons && this._pinButtons[node.id];
+      if (!pin) return;
+
       const prog = this.getProgress(node.id);
-      const pin = document.createElement("div");
-      pin.className = `map-node-pin act-${node.act || 1}`;
-      pin.setAttribute("role", "button");
-      pin.setAttribute("tabindex", "0");
-      pin.setAttribute("aria-label", `Mission ${node.id}: ${node.title}${prog.mastered ? " (Mastered)" : node.id === nextQuestId ? " (Next Quest)" : ""}`);
-      if (node.isBoss) pin.classList.add("boss-node");
-      if (node.id === this.state.selectedNodeId) pin.classList.add("selected");
-      if (prog.mastered) {
-        pin.classList.add("mastered");
-      } else if (node.id === nextQuestId) {
-        pin.classList.add("next-quest");
-      } else {
-        pin.classList.add("upcoming");
-      }
-      if (node.mapPos.y >= 65) pin.classList.add("label-above");
+      const isSelected = this.state.selectedNodeId === node.id;
+      const isNext = node.id === nextQuestId;
 
-      pin.style.left = `${node.mapPos.x}%`;
-      pin.style.top = `${node.mapPos.y}%`;
+      pin.classList.toggle("mastered", !!prog.mastered);
+      pin.classList.toggle("next-quest", !prog.mastered && isNext);
+      pin.classList.toggle("upcoming", !prog.mastered && !isNext);
+      pin.classList.toggle("selected", isSelected);
+      pin.setAttribute(
+        "aria-label",
+        `Mission ${node.id}: ${node.title}${prog.mastered ? " (Mastered)" : isNext ? " (Next Quest)" : ""}`
+      );
 
-      const pinGraphic = this.getNodeIconSVG(node, node.isBoss ? 30 : 26);
-
-      pin.innerHTML = `
-        <div class="node-medallion">
-          <span class="node-num-badge">${node.id}</span>
-          <div style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;">${pinGraphic}</div>
-          ${prog.mastered ? `<span class="node-seal-crown">${Visuals.getIconSVG("seal", 22)}</span>` : ""}
-        </div>
-        <div class="node-label-plate">${node.id}. ${node.title}</div>
-      `;
-
-      const activatePin = () => {
-        if (this.state.selectedNodeId === node.id) {
-          this.zoomIntoStronghold(node.id);
+      const crownEl = pin.querySelector ? pin.querySelector(".node-seal-crown") : null;
+      if (crownEl) {
+        if (prog.mastered) {
+          crownEl.innerHTML = Visuals.getIconSVG(node.isBoss ? "crown" : "seal", 20);
         } else {
-          this.selectMapNode(node.id);
+          crownEl.innerHTML = node.isBoss ? Visuals.getIconSVG("bossShield", 20) : "";
+        }
+      }
+
+      const starsArc = pin.querySelector ? pin.querySelector(".node-stars-arc") : null;
+      if (starsArc) {
+        const starsWon = prog.mastered
+          ? (prog.stars > 0 ? Math.min(3, prog.stars) : 3)
+          : Math.min(3, prog.stars || 0);
+        if (starsWon > 0) {
+          let arcHtml = "";
+          for (let s = 1; s <= 3; s++) {
+            const filled = s <= starsWon;
+            const centerCls = s === 2 ? " center-star" : "";
+            const emptyCls = filled ? "" : " empty";
+            arcHtml += `<span class="node-star-pip${centerCls}${emptyCls}">${Visuals.getIconSVG(filled ? "star" : "starEmpty", 16)}</span>`;
+          }
+          starsArc.innerHTML = arcHtml;
+        } else {
+          starsArc.innerHTML = "";
+        }
+      }
+    });
+
+    const svgContainer = document.getElementById("svg-map-container");
+    if (svgContainer && svgContainer.querySelectorAll) {
+      const roadSegs = svgContainer.querySelectorAll(".map-road-segment");
+      if (roadSegs && roadSegs.forEach) {
+        roadSegs.forEach((segEl) => {
+          const key = segEl.getAttribute("data-road-seg") || "";
+          const parts = key.split("-");
+          const fromId = parseInt(parts[0], 10);
+          const toId = parseInt(parts[1], 10);
+          const conquered = !!(this.getProgress(fromId).mastered || this.getProgress(toId).mastered);
+          segEl.classList.toggle("conquered", conquered);
+          segEl.classList.toggle("upcoming", !conquered);
+        });
+      }
+    }
+
+    const beaconsLit = !!(this.getProgress(19).mastered || this.getProgress(18).mastered);
+    const beaconEl = document.getElementById("map-signal-beacons");
+    if (beaconEl && beaconEl.classList) {
+      beaconEl.classList.toggle("beacons-lit", beaconsLit);
+    }
+    if (typeof KingdomAtmosphere !== "undefined" && KingdomAtmosphere.setBeaconsLit) {
+      KingdomAtmosphere.setBeaconsLit(beaconsLit);
+    }
+
+    this.updateMapBottomDock();
+  },
+
+  bindMapInteractions() {
+    if (this._mapEventsBound) return;
+    this._mapEventsBound = true;
+
+    const svgContainer = document.getElementById("svg-map-container");
+    if (svgContainer) {
+      const triggerLandmark = (hitEl, clientX, clientY) => {
+        const key = hitEl.getAttribute("data-landmark");
+        const canvas = document.getElementById("map-atmosphere-canvas");
+        let fxX = 600;
+        let fxY = 325;
+        if (canvas && typeof canvas.getBoundingClientRect === "function") {
+          const rect = canvas.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0) {
+            if (typeof clientX === "number" && typeof clientY === "number" && (clientX !== 0 || clientY !== 0)) {
+              fxX = ((clientX - rect.left) / rect.width) * 1200;
+              fxY = ((clientY - rect.top) / rect.height) * 650;
+            } else {
+              const hr = hitEl.getBoundingClientRect();
+              fxX = ((hr.left + hr.width * 0.5 - rect.left) / rect.width) * 1200;
+              fxY = ((hr.top + hr.height * 0.5 - rect.top) / rect.height) * 650;
+            }
+          }
+        }
+
+        if (key === "compass") {
+          this.ensureMapState();
+          this.cameraState.compassDeg = (this.cameraState.compassDeg || 0) + 360;
+          const needle = document.getElementById("compass-needle");
+          if (needle) {
+            needle.style.transform = `rotate(${this.cameraState.compassDeg}deg)`;
+          }
+          this.playTone([523.25, 659.25, 783.99], "sine", 0.12, 0.04);
+          return;
+        }
+
+        if (key === "bridge" || key === "barge" || key === "pirate" || key === "serpent") {
+          this.playTone([392, 493.88], "sine", 0.14, 0.035);
+          if (typeof KingdomAtmosphere !== "undefined" && KingdomAtmosphere.spawnRipple) {
+            KingdomAtmosphere.spawnRipple(fxX, fxY, "rgba(225, 250, 255, 0.9)");
+          }
+          return;
+        }
+
+        if (key === "forge" || key === "beacon" || key === "citadel" || key === "clock" || key === "golem") {
+          this.playTone([587.33, 880], "triangle", 0.12, 0.04);
+          if (typeof KingdomAtmosphere !== "undefined" && KingdomAtmosphere.spawnSparkBurst) {
+            const color = key === "forge" || key === "beacon" ? "#FFAA3B" : "#FFE67A";
+            KingdomAtmosphere.spawnSparkBurst(fxX, fxY, color);
+          }
+          return;
+        }
+
+        this.playTone([440, 554.37], "sine", 0.1, 0.03);
+        if (typeof KingdomAtmosphere !== "undefined" && KingdomAtmosphere.spawnDustPuff) {
+          KingdomAtmosphere.spawnDustPuff(fxX, fxY);
         }
       };
 
-      pin.addEventListener("click", activatePin);
-      pin.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          activatePin();
+      svgContainer.addEventListener("click", (e) => {
+        if (this.cameraState && this.cameraState.dragMoved) return;
+        const hit = e.target && e.target.closest ? e.target.closest(".map-landmark-hit") : null;
+        if (hit) {
+          triggerLandmark(hit, e.clientX, e.clientY);
         }
       });
 
-      overlay.appendChild(pin);
+      svgContainer.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          const hit = e.target && e.target.closest ? e.target.closest(".map-landmark-hit") : null;
+          if (hit) {
+            e.preventDefault();
+            triggerLandmark(hit);
+          }
+        }
+      });
+    }
+
+    const wrapper = document.getElementById("map-canvas-wrapper");
+    const zoomLayer = document.getElementById("map-zoom-layer");
+    if (!wrapper || !zoomLayer) return;
+
+    const prefersReduced =
+      typeof window !== "undefined" &&
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (!prefersReduced) {
+      wrapper.addEventListener("pointermove", (e) => {
+        if (this.cameraState && this.cameraState.isDragging) return;
+        const rect = wrapper.getBoundingClientRect ? wrapper.getBoundingClientRect() : null;
+        if (!rect || rect.width <= 0 || rect.height <= 0) return;
+        const nx = (e.clientX - rect.left) / rect.width - 0.5;
+        const ny = (e.clientY - rect.top) / rect.height - 0.5;
+        const scale = (this.cameraState && this.cameraState.scale) || 1;
+        const zoomDamp = scale > 1 ? 1 / Math.sqrt(scale) : 1;
+        zoomLayer.style.setProperty("--tilt-y", `${(nx * 2.0 * zoomDamp).toFixed(2)}deg`);
+        zoomLayer.style.setProperty("--tilt-x", `${(-ny * 1.7 * zoomDamp).toFixed(2)}deg`);
+      });
+
+      wrapper.addEventListener("pointerleave", () => {
+        zoomLayer.style.setProperty("--tilt-x", "0deg");
+        zoomLayer.style.setProperty("--tilt-y", "0deg");
+      });
+    }
+
+    wrapper.addEventListener("pointerdown", (e) => {
+      this.ensureMapState();
+      if (e.button !== undefined && e.button !== 0) return;
+      if (e.target && e.target.closest && (e.target.closest(".map-realm-bar") || e.target.closest(".map-camera-controls") || e.target.closest(".map-node-pin"))) {
+        return;
+      }
+      if (this.cameraState.scale <= 1.02) return;
+      this.cameraState.isDragging = true;
+      this.cameraState.dragMoved = false;
+      this.cameraState.dragStartX = e.clientX;
+      this.cameraState.dragStartY = e.clientY;
+      this.cameraState.startTx = this.cameraState.tx;
+      this.cameraState.startTy = this.cameraState.ty;
+      wrapper.classList.add("is-dragging");
+      zoomLayer.classList.add("is-panning");
     });
 
-    this.positionSquireToken(this.state.squireNodeId, false);
-    this.updateMapBottomDock();
+    wrapper.addEventListener("pointermove", (e) => {
+      if (!this.cameraState || !this.cameraState.isDragging) return;
+      const dx = e.clientX - this.cameraState.dragStartX;
+      const dy = e.clientY - this.cameraState.dragStartY;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+        this.cameraState.dragMoved = true;
+      }
+      const rect = zoomLayer.getBoundingClientRect();
+      const baseW = Math.max(1, rect.width / this.cameraState.scale);
+      const baseH = Math.max(1, rect.height / this.cameraState.scale);
+      const dtx = (dx / baseW) * 100;
+      const dty = (dy / baseH) * 100;
+      this.setMapCamera(this.cameraState.scale, this.cameraState.startTx + dtx, this.cameraState.startTy + dty, false);
+    });
+
+    const endDrag = () => {
+      if (!this.cameraState || !this.cameraState.isDragging) return;
+      this.cameraState.isDragging = false;
+      wrapper.classList.remove("is-dragging");
+      zoomLayer.classList.remove("is-panning");
+      setTimeout(() => {
+        if (this.cameraState) this.cameraState.dragMoved = false;
+      }, 40);
+    };
+    wrapper.addEventListener("pointerup", endDrag);
+    wrapper.addEventListener("pointercancel", endDrag);
+
+    wrapper.addEventListener(
+      "wheel",
+      (e) => {
+        if (!e || typeof e.deltaY !== "number") return;
+        e.preventDefault();
+        const delta = e.deltaY < 0 ? 0.22 : -0.22;
+        this.adjustMapZoom(delta);
+      },
+      { passive: false }
+    );
+  },
+
+  clampCameraOffsets(scale, tx, ty) {
+    const s = Math.max(1, Math.min(2.3, scale));
+    const maxShift = 50 * (s - 1);
+    return {
+      scale: s,
+      tx: Math.max(-maxShift, Math.min(maxShift, tx)),
+      ty: Math.max(-maxShift, Math.min(maxShift, ty)),
+    };
+  },
+
+  setMapCamera(scale, tx, ty, updateRealmTabs = true) {
+    this.ensureMapState();
+    const clamped = this.clampCameraOffsets(scale, tx, ty);
+    this.cameraState.scale = clamped.scale;
+    this.cameraState.tx = clamped.tx;
+    this.cameraState.ty = clamped.ty;
+    if (clamped.scale <= 1.03 && updateRealmTabs) {
+      this.cameraState.activeRealm = "all";
+      this.updateRealmTabsUI();
+    }
+    this.applyMapCamera(true);
+  },
+
+  applyMapCamera(clearInline = false) {
+    this.ensureMapState();
+    const zoomLayer = document.getElementById("map-zoom-layer");
+    const wrapper = document.getElementById("map-canvas-wrapper");
+    if (zoomLayer && zoomLayer.style) {
+      if (clearInline) {
+        zoomLayer.style.transform = "";
+      }
+      if (zoomLayer.style.setProperty) {
+        zoomLayer.style.setProperty("--cam-scale", this.cameraState.scale.toFixed(3));
+        zoomLayer.style.setProperty("--cam-tx", `${this.cameraState.tx.toFixed(2)}%`);
+        zoomLayer.style.setProperty("--cam-ty", `${this.cameraState.ty.toFixed(2)}%`);
+      }
+    }
+    if (wrapper && wrapper.classList) {
+      wrapper.classList.toggle("is-zoomed", this.cameraState.scale > 1.03);
+    }
+  },
+
+  updateRealmTabsUI() {
+    const tabs = document.querySelectorAll(".realm-tab");
+    if (tabs && tabs.forEach) {
+      tabs.forEach((tab) => {
+        tab.classList.toggle("active", tab.dataset.realm === this.cameraState.activeRealm);
+      });
+    }
+  },
+
+  setMapRealm(realmKey) {
+    this.ensureMapState();
+    const preset = this.MAP_REALMS[realmKey] || this.MAP_REALMS.all;
+    this.cameraState.activeRealm = preset === this.MAP_REALMS.all ? "all" : realmKey;
+    const rawTx = (50 - preset.cx) * preset.scale;
+    const rawTy = (50 - preset.cy) * preset.scale;
+    this.updateRealmTabsUI();
+    this.setMapCamera(preset.scale, rawTx, rawTy, false);
+    this.playTone(realmKey === "all" ? [440, 349.23] : [392, 523.25], "sine", 0.1, 0.03);
+  },
+
+  adjustMapZoom(delta) {
+    this.ensureMapState();
+    const nextScale = Math.max(1, Math.min(2.3, this.cameraState.scale + delta));
+    const ratio = this.cameraState.scale > 0 ? nextScale / this.cameraState.scale : 1;
+    let nextTx = this.cameraState.tx * ratio;
+    let nextTy = this.cameraState.ty * ratio;
+    if (delta > 0 && this.cameraState.scale <= 1.03) {
+      const selNode = this.getNode(this.state.selectedNodeId);
+      if (selNode) {
+        nextTx = (50 - selNode.mapPos.x) * nextScale;
+        nextTy = (50 - selNode.mapPos.y) * nextScale;
+      }
+    }
+    if (nextScale <= 1.03) {
+      this.cameraState.activeRealm = "all";
+    } else {
+      this.cameraState.activeRealm = "";
+    }
+    this.updateRealmTabsUI();
+    this.setMapCamera(nextScale, nextTx, nextTy, false);
+  },
+
+  stepSelectedMission(delta) {
+    const idx = CURRICULUM_NODES.findIndex((n) => n.id === this.state.selectedNodeId);
+    const nextIdx = Math.max(0, Math.min(CURRICULUM_NODES.length - 1, (idx >= 0 ? idx : 0) + delta));
+    const targetNode = CURRICULUM_NODES[nextIdx];
+    if (targetNode && targetNode.id !== this.state.selectedNodeId) {
+      this.selectMapNode(targetNode.id);
+      if (this.cameraState && this.cameraState.scale > 1.05) {
+        const s = this.cameraState.scale;
+        this.setMapCamera(s, (50 - targetNode.mapPos.x) * s, (50 - targetNode.mapPos.y) * s, false);
+      }
+    }
   },
 
   selectMapNode(nodeId) {
@@ -363,20 +753,120 @@ const App = {
     this.positionSquireToken(nodeId, true);
     this.state.squireNodeId = nodeId;
     this.saveState();
-    this.renderMapAll();
+    this.mountMapScene();
+    this.syncMapState();
+  },
+
+  _buildMarchSplinePercent(fromId, toId) {
+    if (!this.highwayData || !this.highwayData.nodeSamples || fromId === toId) {
+      const n = this.getNode(toId);
+      return n ? [{ x: n.mapPos.x, y: n.mapPos.y }] : [];
+    }
+    const step = toId > fromId ? 1 : -1;
+    const pts = [];
+    for (let id = fromId; id !== toId; id += step) {
+      const a = step > 0 ? id : id - 1;
+      const b = step > 0 ? id + 1 : id;
+      const key = `${a}->${b}`;
+      const samples = this.highwayData.nodeSamples[key];
+      if (samples && samples.length) {
+        const ordered = step > 0 ? samples : samples.slice().reverse();
+        ordered.forEach((p, idx) => {
+          if (idx === 0 && pts.length > 0) return;
+          pts.push({ x: p.x / 12, y: p.y / 6.5 });
+        });
+      }
+    }
+    if (pts.length === 0) {
+      const n = this.getNode(toId);
+      return n ? [{ x: n.mapPos.x, y: n.mapPos.y }] : [];
+    }
+    return pts;
   },
 
   positionSquireToken(nodeId, animate = true) {
     const node = this.getNode(nodeId);
     const token = document.getElementById("squire-map-token");
+    const figure = document.getElementById("squire-svg-holder");
     if (!token || !node) return;
 
-    if (animate) {
-      token.classList.add("marching");
-      setTimeout(() => token.classList.remove("marching"), 1300);
+    if (this.marchRafId && typeof cancelAnimationFrame === "function") {
+      cancelAnimationFrame(this.marchRafId);
+      this.marchRafId = null;
     }
-    token.style.left = `${node.mapPos.x}%`;
-    token.style.top = `${node.mapPos.y}%`;
+
+    const fromId = this.squireNodePosId || this.state.squireNodeId || node.id;
+    const prefersReduced =
+      typeof window !== "undefined" &&
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const canAnimate =
+      animate &&
+      !prefersReduced &&
+      fromId !== node.id &&
+      typeof performance !== "undefined" &&
+      typeof requestAnimationFrame === "function";
+
+    if (!canAnimate) {
+      token.classList.remove("marching");
+      token.style.left = `${node.mapPos.x}%`;
+      token.style.top = `${node.mapPos.y}%`;
+      this.squireNodePosId = node.id;
+      this.squirePos = { x: node.mapPos.x, y: node.mapPos.y };
+      return;
+    }
+
+    const pts = this._buildMarchSplinePercent(fromId, node.id);
+    if (pts.length < 2) {
+      token.style.left = `${node.mapPos.x}%`;
+      token.style.top = `${node.mapPos.y}%`;
+      this.squireNodePosId = node.id;
+      this.squirePos = { x: node.mapPos.x, y: node.mapPos.y };
+      return;
+    }
+
+    const hops = Math.abs(node.id - fromId);
+    const duration = Math.min(2400, 680 + hops * 240);
+    const startTime = performance.now();
+    let lastPuffTime = startTime;
+    let prevX = pts[0].x;
+    token.classList.add("marching");
+
+    const tick = (now) => {
+      const t = Math.min(1, (now - startTime) / duration);
+      const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      const fIdx = ease * (pts.length - 1);
+      const i0 = Math.floor(fIdx);
+      const i1 = Math.min(pts.length - 1, i0 + 1);
+      const frac = fIdx - i0;
+      const x = pts[i0].x + (pts[i1].x - pts[i0].x) * frac;
+      const y = pts[i0].y + (pts[i1].y - pts[i0].y) * frac;
+
+      if (figure && figure.classList) {
+        if (x - prevX < -0.04) figure.classList.add("facing-left");
+        else if (x - prevX > 0.04) figure.classList.remove("facing-left");
+      }
+      prevX = x;
+
+      token.style.left = `${x.toFixed(3)}%`;
+      token.style.top = `${y.toFixed(3)}%`;
+      this.squirePos = { x, y };
+
+      if (now - lastPuffTime > 150 && typeof KingdomAtmosphere !== "undefined" && KingdomAtmosphere.spawnDustPuff) {
+        lastPuffTime = now;
+        KingdomAtmosphere.spawnDustPuff(x * 12, y * 6.5);
+      }
+
+      if (t < 1) {
+        this.marchRafId = requestAnimationFrame(tick);
+      } else {
+        this.marchRafId = null;
+        this.squireNodePosId = node.id;
+        token.classList.remove("marching");
+      }
+    };
+
+    this.marchRafId = requestAnimationFrame(tick);
   },
 
   updateMapBottomDock() {
@@ -402,6 +892,12 @@ const App = {
     if (enterBtnSpan) {
       enterBtnSpan.textContent = prog.mastered ? "Replay Level →" : (node.isBoss ? "Enter Boss Trial →" : "Start Level →");
     }
+
+    const prevBtn = document.getElementById("btn-prev-mission");
+    const nextBtn = document.getElementById("btn-next-mission");
+    const idx = CURRICULUM_NODES.findIndex((n) => n.id === node.id);
+    if (prevBtn) prevBtn.disabled = idx <= 0;
+    if (nextBtn) nextBtn.disabled = idx >= CURRICULUM_NODES.length - 1;
   },
 
   zoomIntoStronghold(nodeId) {
@@ -414,14 +910,14 @@ const App = {
 
     const tx = (50 - node.mapPos.x) * 1.4;
     const ty = (50 - node.mapPos.y) * 1.4;
-    zoomLayer.style.transform = `scale(2.35) translate(${tx}%, ${ty}%)`;
+    zoomLayer.style.transform = `translate(${tx}%, ${ty}%) scale(2.35)`;
     zoomLayer.classList.add("zooming-into-node");
 
     setTimeout(() => {
       this.switchView("studio");
       this.openNodeInStudio(nodeId);
       zoomLayer.style.transition = "none";
-      zoomLayer.style.transform = "scale(1) translate(0, 0)";
+      zoomLayer.style.transform = "";
       zoomLayer.classList.remove("zooming-into-node");
       setTimeout(() => {
         zoomLayer.style.transition = "";
@@ -441,7 +937,7 @@ const App = {
     const ty = (50 - completedNode.mapPos.y) * 1.3;
 
     zoomLayer.style.transition = "none";
-    zoomLayer.style.transform = `scale(2.2) translate(${tx}%, ${ty}%)`;
+    zoomLayer.style.transform = `translate(${tx}%, ${ty}%) scale(2.2)`;
     this.switchView("map", false);
     this.renderMapAll();
     this.positionSquireToken(completedId, false);
@@ -449,13 +945,14 @@ const App = {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         zoomLayer.style.transition = "transform 0.85s cubic-bezier(0.22, 1, 0.36, 1)";
-        zoomLayer.style.transform = "scale(1) translate(0, 0)";
+        zoomLayer.style.transform = "";
 
         setTimeout(() => {
           this.state.selectedNodeId = nextId;
           this.state.squireNodeId = nextId;
           this.saveState();
-          this.renderMapAll();
+          this.mountMapScene();
+          this.syncMapState();
           this.positionSquireToken(completedId, false);
 
           requestAnimationFrame(() => {
@@ -484,6 +981,10 @@ const App = {
       if (mapBtn) mapBtn.classList.toggle("hidden", viewName === "map");
       if (tabletopBtn) tabletopBtn.classList.toggle("hidden", viewName !== "map");
       if (placementBtn) placementBtn.classList.toggle("hidden", viewName !== "map");
+
+      if (typeof KingdomAtmosphere !== "undefined" && KingdomAtmosphere.setActive) {
+        KingdomAtmosphere.setActive(viewName === "map");
+      }
 
       if (viewName === "map") {
         this.renderMapAll();
@@ -2059,6 +2560,38 @@ const App = {
     document.getElementById("btn-enter-node").addEventListener("click", () => {
       this.zoomIntoStronghold(this.state.selectedNodeId);
     });
+
+    const realmBar = document.getElementById("map-realm-bar");
+    if (realmBar) {
+      realmBar.addEventListener("click", (e) => {
+        const tab = e.target.closest(".realm-tab");
+        if (tab && tab.dataset.realm) {
+          this.setMapRealm(tab.dataset.realm);
+        }
+      });
+    }
+
+    const zoomInBtn = document.getElementById("btn-zoom-in");
+    if (zoomInBtn) {
+      zoomInBtn.addEventListener("click", () => this.adjustMapZoom(0.32));
+    }
+    const zoomOutBtn = document.getElementById("btn-zoom-out");
+    if (zoomOutBtn) {
+      zoomOutBtn.addEventListener("click", () => this.adjustMapZoom(-0.32));
+    }
+    const zoomResetBtn = document.getElementById("btn-zoom-reset");
+    if (zoomResetBtn) {
+      zoomResetBtn.addEventListener("click", () => this.setMapRealm("all"));
+    }
+
+    const prevMissionBtn = document.getElementById("btn-prev-mission");
+    if (prevMissionBtn) {
+      prevMissionBtn.addEventListener("click", () => this.stepSelectedMission(-1));
+    }
+    const nextMissionBtn = document.getElementById("btn-next-mission");
+    if (nextMissionBtn) {
+      nextMissionBtn.addEventListener("click", () => this.stepSelectedMission(1));
+    }
 
     // Mode Switch (Lesson vs Play)
     document.getElementById("tab-learn").addEventListener("click", () => this.setStudioMode("learn"));

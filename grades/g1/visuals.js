@@ -184,6 +184,12 @@ const Visuals = {
           <circle cx="18" cy="18" r="11.5" fill="#7D1D1D" stroke="#F0C445" stroke-width="1.2" stroke-dasharray="2.5,2"/>
           <polygon points="10.5,22.5 12,12.5 15.2,17 18,10.5 20.8,17 24,12.5 25.5,22.5" fill="#F0C445" stroke="#4A1010" stroke-width="0.8" stroke-linejoin="round"/>
         </svg>`;
+      case "bossShield":
+        return `<svg width="${size}" height="${size}" viewBox="0 0 36 36">
+          <path d="M5 6 L18 2 L31 6 L30 19 C29 27.5 18 33.5 18 33.5 C18 33.5 7 27.5 6 19 Z" fill="#2A1B14" stroke="#F0C445" stroke-width="2.5" stroke-linejoin="round"/>
+          <path d="M9 9 L18 6 L27 9 L26.5 18.5 C25.5 24.5 18 29 18 29 C18 29 10.5 24.5 9.5 18.5 Z" fill="#8C1D1D"/>
+          <polygon points="18,9.5 22.5,17 18,24.5 13.5,17" fill="#F6D56B" stroke="#2A1B14" stroke-width="1"/>
+        </svg>`;
       default:
         return this.getItemSVG("shield", "primary", size);
     }
@@ -485,197 +491,687 @@ const Visuals = {
   },
 
   // --------------------------------------------------------------------------
-  // 6. ILLUSTRATED KINGDOM OVERWORLD MAP SVG (Smooth Spline, River Crossing, Landmarks)
+  // 6. 2.5D ILLUSTRATED KINGDOM DIORAMA MAP (Textures, Relief, Shadows, Landmarks)
   // --------------------------------------------------------------------------
-  renderKingdomMapSVG(nodes) {
-    const nodePts = nodes.map(n => ({
+  _vellumPatternURL: null,
+
+  getVellumPatternDataURL() {
+    if (this._vellumPatternURL !== null) return this._vellumPatternURL;
+    if (typeof document === "undefined") {
+      this._vellumPatternURL = "";
+      return "";
+    }
+    try {
+      const c = document.createElement("canvas");
+      if (!c || typeof c.getContext !== "function") {
+        this._vellumPatternURL = "";
+        return "";
+      }
+      c.width = 192;
+      c.height = 192;
+      const ctx = c.getContext("2d");
+      if (!ctx) {
+        this._vellumPatternURL = "";
+        return "";
+      }
+      ctx.fillStyle = "#F5EFE0";
+      ctx.fillRect(0, 0, 192, 192);
+      const hash01 = (n) => {
+        const s = Math.sin(n * 127.1 + 311.7) * 43758.5453123;
+        return s - Math.floor(s);
+      };
+      for (let i = 0; i < 42; i++) {
+        const px = hash01(i * 3 + 1) * 192;
+        const py = hash01(i * 3 + 2) * 192;
+        const r = 14 + hash01(i * 3 + 3) * 28;
+        const g = ctx.createRadialGradient(px, py, 1, px, py, r);
+        g.addColorStop(0, i % 2 === 0 ? "rgba(138, 106, 62, 0.09)" : "rgba(255, 252, 244, 0.14)");
+        g.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = g;
+        ctx.fillRect(px - r, py - r, r * 2, r * 2);
+      }
+      for (let k = 0; k < 560; k++) {
+        const x = hash01(k * 5 + 11) * 192;
+        const y = hash01(k * 5 + 12) * 192;
+        const ang = (hash01(k * 5 + 13) - 0.5) * Math.PI;
+        const len = 3 + hash01(k * 5 + 14) * 7;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(ang);
+        ctx.fillStyle = k % 3 === 0 ? "rgba(92, 68, 38, 0.08)" : "rgba(255, 253, 245, 0.12)";
+        ctx.fillRect(-len * 0.5, -0.45, len, 0.9);
+        ctx.restore();
+      }
+      this._vellumPatternURL = c.toDataURL("image/png");
+    } catch (e) {
+      this._vellumPatternURL = "";
+    }
+    return this._vellumPatternURL;
+  },
+
+  buildHighwayData(nodes) {
+    const nodePts = nodes.map((n) => ({
+      id: n.id,
       x: (n.mapPos.x / 100) * 1200,
       y: (n.mapPos.y / 100) * 650
     }));
 
-    // Route the King's Highway cleanly across Stoneholm Bridge between Node 6 and Node 7
+    // Guide the highway cleanly over both Stoneholm Bridge (6->7) and Serpent Crossing Bridge (11->12)
     const roadPts = [];
     nodePts.forEach((pt, idx) => {
-      roadPts.push(pt);
+      roadPts.push({ ...pt, isBridgeMid: false });
       if (idx === 5) {
-        roadPts.push({ x: 504, y: 158 });
+        roadPts.push({ id: null, x: 478, y: 206, isBridgeMid: true });
+      } else if (idx === 10) {
+        roadPts.push({ id: null, x: 695, y: 294, isBridgeMid: true });
       }
     });
 
-    // Smooth Catmull-Rom to Cubic Bezier path (zero harsh zig-zag kinks)
-    let pathD = `M ${roadPts[0].x.toFixed(1)} ${roadPts[0].y.toFixed(1)}`;
+    const cubicCurves = [];
     for (let i = 0; i < roadPts.length - 1; i++) {
       const p0 = roadPts[Math.max(0, i - 1)];
       const p1 = roadPts[i];
       const p2 = roadPts[i + 1];
       const p3 = roadPts[Math.min(roadPts.length - 1, i + 2)];
-      const cp1x = p1.x + (p2.x - p0.x) / 6;
-      const cp1y = p1.y + (p2.y - p0.y) / 6;
-      const cp2x = p2.x - (p3.x - p1.x) / 6;
-      const cp2y = p2.y - (p3.y - p1.y) / 6;
-      pathD += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+      cubicCurves.push({
+        from: p1,
+        to: p2,
+        cp1x: p1.x + (p2.x - p0.x) / 6,
+        cp1y: p1.y + (p2.y - p0.y) / 6,
+        cp2x: p2.x - (p3.x - p1.x) / 6,
+        cp2y: p2.y - (p3.y - p1.y) / 6
+      });
     }
 
-    const riverD = "M 472 -15 C 505 85, 515 160, 492 260 C 470 355, 518 450, 502 555 C 492 610, 476 645, 468 665";
+    const evalCurvePt = (c, u) => {
+      const mu = 1 - u;
+      return {
+        x: mu * mu * mu * c.from.x + 3 * mu * mu * u * c.cp1x + 3 * mu * u * u * c.cp2x + u * u * u * c.to.x,
+        y: mu * mu * mu * c.from.y + 3 * mu * mu * u * c.cp1y + 3 * mu * u * u * c.cp2y + u * u * u * c.to.y
+      };
+    };
 
-    return `<svg viewBox="0 0 1200 650" preserveAspectRatio="xMidYMid meet">
+    const segments = [];
+    const nodeSamples = {};
+    let fullPathD = `M ${roadPts[0].x.toFixed(1)} ${roadPts[0].y.toFixed(1)}`;
+
+    let curFromId = 1;
+    let curSegD = "";
+    let curSamples = [];
+
+    cubicCurves.forEach((c) => {
+      const partD = ` C ${c.cp1x.toFixed(1)} ${c.cp1y.toFixed(1)}, ${c.cp2x.toFixed(1)} ${c.cp2y.toFixed(1)}, ${c.to.x.toFixed(1)} ${c.to.y.toFixed(1)}`;
+      fullPathD += partD;
+
+      if (c.from.id !== null) {
+        curFromId = c.from.id;
+        curSegD = `M ${c.from.x.toFixed(1)} ${c.from.y.toFixed(1)}${partD}`;
+        curSamples = [];
+      } else {
+        curSegD += partD;
+      }
+
+      const steps = 16;
+      for (let s = 0; s <= steps; s++) {
+        if (s === 0 && curSamples.length > 0) continue;
+        curSamples.push(evalCurvePt(c, s / steps));
+      }
+
+      if (c.to.id !== null) {
+        const toId = c.to.id;
+        segments.push({ fromId: curFromId, toId, d: curSegD });
+        nodeSamples[`${curFromId}->${toId}`] = curSamples;
+      }
+    });
+
+    return { nodePts, fullPathD, segments, nodeSamples };
+  },
+
+  _mapPine(x, y, s = 1) {
+    return `<g transform="translate(${x}, ${y}) scale(${s})">
+      <ellipse cx="7" cy="4" rx="13" ry="5" fill="#2A3A20" opacity="0.28"/>
+      <rect x="-2.2" y="-3" width="4.4" height="8" rx="1" fill="#5A3921" stroke="#1E1812" stroke-width="1"/>
+      <polygon points="-14,-2 0,-22 14,-2" fill="#245934" stroke="#182D1E" stroke-width="1.2" stroke-linejoin="round"/>
+      <polygon points="0,-22 14,-2 0,-1" fill="#1A4226" opacity="0.55"/>
+      <polygon points="-11,-11 0,-31 11,-11" fill="#327345" stroke="#182D1E" stroke-width="1.2" stroke-linejoin="round"/>
+      <polygon points="0,-31 11,-11 0,-10" fill="#20522F" opacity="0.55"/>
+      <polygon points="-8,-21 0,-38 8,-21" fill="#468F58" stroke="#182D1E" stroke-width="1.2" stroke-linejoin="round"/>
+      <polygon points="-6,-22 0,-36 -1,-21" fill="#6FB878" opacity="0.48"/>
+    </g>`;
+  },
+
+  _mapOak(x, y, s = 1, hasApples = false) {
+    const apples = hasApples
+      ? `<circle cx="-7" cy="-16" r="2.1" fill="#D1322B" stroke="#4D1210" stroke-width="0.6"/>
+         <circle cx="5" cy="-21" r="2.1" fill="#D1322B" stroke="#4D1210" stroke-width="0.6"/>
+         <circle cx="8" cy="-13" r="1.9" fill="#E8A22E" stroke="#4D1210" stroke-width="0.6"/>`
+      : "";
+    return `<g transform="translate(${x}, ${y}) scale(${s})">
+      <ellipse cx="8" cy="5" rx="17" ry="6.5" fill="#2A3A20" opacity="0.28"/>
+      <path d="M -3 4 L -2 -9 L 2 -9 L 3 4 Z" fill="#684326" stroke="#1E1812" stroke-width="1.1"/>
+      <circle cx="0" cy="-14" r="13.5" fill="#295F35" stroke="#182D1E" stroke-width="1.3"/>
+      <circle cx="-6" cy="-17" r="10.5" fill="#3D7F49"/>
+      <circle cx="6" cy="-16" r="9.5" fill="#316C3E"/>
+      <circle cx="-1" cy="-22" r="9.5" fill="#509858"/>
+      <path d="M -9 -22 Q -2 -29 7 -22" fill="none" stroke="#85C77E" stroke-width="2" stroke-linecap="round" opacity="0.65"/>
+      ${apples}
+    </g>`;
+  },
+
+  _mapHighlandRock(x, y, s = 1) {
+    return `<g transform="translate(${x}, ${y}) scale(${s})">
+      <ellipse cx="4" cy="6" rx="16" ry="5" fill="#3D2614" opacity="0.28"/>
+      <polygon points="-13,6 -9,-10 0,-16 11,-7 14,6" fill="#9E7E5C" stroke="#2D1F13" stroke-width="1.3" stroke-linejoin="round"/>
+      <polygon points="0,-16 11,-7 14,6 2,6" fill="#7A5E42"/>
+      <polygon points="-9,-10 0,-16 -1,-4 -7,0" fill="#CEB08A" opacity="0.72"/>
+    </g>`;
+  },
+
+  _mapScrub(x, y, s = 1) {
+    return `<g transform="translate(${x}, ${y}) scale(${s})">
+      <ellipse cx="3" cy="3" rx="10" ry="3.5" fill="#3D2614" opacity="0.22"/>
+      <circle cx="-4" cy="-2" r="5.5" fill="#8C7432" stroke="#302412" stroke-width="1.1"/>
+      <circle cx="4" cy="-2" r="5" fill="#766027" stroke="#302412" stroke-width="1.1"/>
+      <circle cx="0" cy="-6" r="5.5" fill="#A68B42"/>
+    </g>`;
+  },
+
+  _mapCartouche(x, y, label, fillMain, accent, textFill) {
+    const w = Math.max(134, label.length * 8.2 + 24);
+    const hw = w * 0.5;
+    return `<g transform="translate(${x}, ${y})">
+      <path d="M ${-hw - 10} -8 L ${-hw + 4} -8 L ${-hw + 4} 11 L ${-hw - 10} 11 L ${-hw - 4} 1.5 Z" fill="${accent}" stroke="#2A1C10" stroke-width="1.2" stroke-linejoin="round"/>
+      <path d="M ${hw + 10} -8 L ${hw - 4} -8 L ${hw - 4} 11 L ${hw + 10} 11 L ${hw + 4} 1.5 Z" fill="${accent}" stroke="#2A1C10" stroke-width="1.2" stroke-linejoin="round"/>
+      <rect x="${-hw}" y="-13" width="${w}" height="24" rx="4" fill="#3D2712" opacity="0.32" transform="translate(2,3)"/>
+      <rect x="${-hw}" y="-13" width="${w}" height="24" rx="4" fill="${fillMain}" stroke="${accent}" stroke-width="2.1"/>
+      <rect x="${-hw + 3}" y="-10" width="${w - 6}" height="18" rx="2.5" fill="none" stroke="#FFF9E6" stroke-width="0.9" opacity="0.65"/>
+      <circle cx="${-hw + 7}" cy="-1" r="2.2" fill="${accent}"/>
+      <circle cx="${hw - 7}" cy="-1" r="2.2" fill="${accent}"/>
+      <text x="0" y="3.5" text-anchor="middle" font-family="Palatino, Georgia, serif" font-size="12.5" font-weight="800" letter-spacing="0.4" fill="${textFill}">${label}</text>
+    </g>`;
+  },
+
+  renderKingdomMapSVG(nodes, progressMap = {}) {
+    const highway = this.buildHighwayData(nodes);
+    const roadSegmentsSVG = highway.segments
+      .map((seg) => {
+        const toProg = progressMap[seg.toId];
+        const fromProg = progressMap[seg.fromId];
+        const conquered = !!(toProg && toProg.mastered) || !!(fromProg && fromProg.mastered);
+        return `<g class="map-road-segment ${conquered ? "conquered" : "upcoming"}" data-road-seg="${seg.fromId}-${seg.toId}">
+          <path d="${seg.d}" class="road-bed-rim"/>
+          <path d="${seg.d}" class="road-surface"/>
+          <path d="${seg.d}" class="road-center-stitch"/>
+        </g>`;
+      })
+      .join("");
+
+    const beaconsLit =
+      !!(progressMap[19] && progressMap[19].mastered) ||
+      !!(progressMap[18] && progressMap[18].mastered);
+
+    return `<svg class="kingdom-map-svg" viewBox="0 0 1200 650" preserveAspectRatio="xMidYMid meet">
       <defs>
-        <radialGradient id="parchmentGlow" cx="48%" cy="46%" r="68%">
-          <stop offset="0%" stop-color="#FDF7EA"/>
-          <stop offset="62%" stop-color="#F0E2C5"/>
-          <stop offset="100%" stop-color="#D9C398"/>
+        <radialGradient id="seaDepthGrad" cx="50%" cy="48%" r="58%">
+          <stop offset="0%" stop-color="#3C7DA1" stop-opacity="0.72"/>
+          <stop offset="68%" stop-color="#275878" stop-opacity="0.34"/>
+          <stop offset="100%" stop-color="#1A425E" stop-opacity="0"/>
         </radialGradient>
-        <linearGradient id="riverGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="#87C3DE"/>
-          <stop offset="50%" stop-color="#4B8AB4"/>
-          <stop offset="100%" stop-color="#2D6288"/>
+        <linearGradient id="continentBaseGrad" x1="0%" y1="0%" x2="100%" y2="85%">
+          <stop offset="0%" stop-color="#76AA5B"/>
+          <stop offset="34%" stop-color="#B9C98E"/>
+          <stop offset="68%" stop-color="#D7B174"/>
+          <stop offset="100%" stop-color="#B7BAC0"/>
         </linearGradient>
-        <radialGradient id="forestBiome" cx="50%" cy="50%" r="55%">
-          <stop offset="0%" stop-color="#76AA68" stop-opacity="0.28"/>
-          <stop offset="100%" stop-color="#76AA68" stop-opacity="0"/>
-        </radialGradient>
-        <radialGradient id="highlandBiome" cx="50%" cy="50%" r="55%">
-          <stop offset="0%" stop-color="#C89E68" stop-opacity="0.24"/>
-          <stop offset="100%" stop-color="#C89E68" stop-opacity="0"/>
-        </radialGradient>
-        <radialGradient id="dragonBiome" cx="50%" cy="50%" r="55%">
-          <stop offset="0%" stop-color="#D1744B" stop-opacity="0.22"/>
-          <stop offset="100%" stop-color="#D1744B" stop-opacity="0"/>
+        <linearGradient id="forestBiomeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#589448"/>
+          <stop offset="55%" stop-color="#74AB58"/>
+          <stop offset="100%" stop-color="#90BC70"/>
+        </linearGradient>
+        <linearGradient id="riverValleyGrad" x1="0%" y1="0%" x2="100%" y2="90%">
+          <stop offset="0%" stop-color="#BBD094"/>
+          <stop offset="50%" stop-color="#CEDB9D"/>
+          <stop offset="100%" stop-color="#A7C48E"/>
+        </linearGradient>
+        <linearGradient id="highlandPlateGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#E4BF7E"/>
+          <stop offset="55%" stop-color="#CFA060"/>
+          <stop offset="100%" stop-color="#B87E46"/>
+        </linearGradient>
+        <linearGradient id="citadelStoneGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#D0D3D8"/>
+          <stop offset="55%" stop-color="#B0B6BE"/>
+          <stop offset="100%" stop-color="#8B929D"/>
+        </linearGradient>
+        <linearGradient id="cliffSkirtGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#9A7248"/>
+          <stop offset="45%" stop-color="#765232"/>
+          <stop offset="100%" stop-color="#4B311B"/>
+        </linearGradient>
+        <linearGradient id="escarpmentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#A67642"/>
+          <stop offset="100%" stop-color="#6B4423"/>
+        </linearGradient>
+        <linearGradient id="riverGrad" gradientUnits="userSpaceOnUse" x1="668" y1="134" x2="668" y2="598">
+          <stop offset="0%" stop-color="#88E0F0"/>
+          <stop offset="35%" stop-color="#3B98BD"/>
+          <stop offset="76%" stop-color="#27799B" stop-opacity="0.98"/>
+          <stop offset="89%" stop-color="#236B8B" stop-opacity="0.48"/>
+          <stop offset="100%" stop-color="#1B4E6B" stop-opacity="0"/>
+        </linearGradient>
+        <linearGradient id="thalwegFadeGrad" gradientUnits="userSpaceOnUse" x1="668" y1="138" x2="668" y2="562">
+          <stop offset="0%" stop-color="#18597D" stop-opacity="0.52"/>
+          <stop offset="72%" stop-color="#18597D" stop-opacity="0.42"/>
+          <stop offset="100%" stop-color="#18597D" stop-opacity="0"/>
+        </linearGradient>
+        <radialGradient id="coveShallowsGrad" cx="50%" cy="44%" r="54%">
+          <stop offset="0%" stop-color="#4AA6C6" stop-opacity="0.72"/>
+          <stop offset="56%" stop-color="#2C789A" stop-opacity="0.42"/>
+          <stop offset="100%" stop-color="#1F5874" stop-opacity="0"/>
         </radialGradient>
       </defs>
 
-      <!-- Illuminated Parchment Base -->
-      <rect width="1200" height="650" fill="url(#parchmentGlow)"/>
-
-      <!-- Subtle Cartographic Grid Lines -->
-      <g stroke="#B89F74" stroke-width="0.6" opacity="0.2">
-        <line x1="0" y1="162" x2="1200" y2="162"/>
-        <line x1="0" y1="325" x2="1200" y2="325"/>
-        <line x1="0" y1="487" x2="1200" y2="487"/>
-        <line x1="300" y1="0" x2="300" y2="650"/>
-        <line x1="600" y1="0" x2="600" y2="650"/>
-        <line x1="900" y1="0" x2="900" y2="650"/>
+      <!-- STRATUM 0: CARTOGRAPHER'S LIVING SEA & BATHYMETRY -->
+      <rect width="1200" height="650" fill="url(#seaDepthGrad)"/>
+      <g stroke="#9ED3E6" stroke-width="0.65" opacity="0.14">
+        <line x1="68" y1="120" x2="540" y2="52"/>
+        <line x1="68" y1="120" x2="760" y2="210"/>
+        <line x1="68" y1="120" x2="460" y2="590"/>
+        <line x1="68" y1="120" x2="175" y2="590"/>
+        <line x1="40" y1="325" x2="1160" y2="325" stroke-dasharray="6,8"/>
       </g>
 
-      <!-- Soft Organic Biome Washes -->
-      <path d="M 35 230 Q 175 145 360 220 Q 430 390 365 565 Q 190 615 45 535 Z" fill="url(#forestBiome)"/>
-      <path d="M 555 110 Q 730 85 885 160 Q 950 350 865 535 Q 690 580 545 495 Z" fill="url(#highlandBiome)"/>
-      <path d="M 920 65 Q 1085 45 1175 160 Q 1190 385 1135 555 Q 995 575 930 430 Z" fill="url(#dragonBiome)"/>
+      <!-- Shallow Coastal Sea Halo & Dashed Sea Foam (Parting cleanly around Estuary Outflow & Pirate Cove Harbor) -->
+      <path d="M 42 200 C 56 105, 165 56, 330 68 C 445 76, 520 58, 635 66 C 750 72, 870 38, 1082 46 C 1152 50, 1178 135, 1178 300 C 1178 440, 1166 534, 1106 554 C 1032 576, 988 538, 932 538 C 878 538, 862 574, 775 578 C 722 580, 695 570, 666 570 C 635 570, 608 584, 525 584 C 415 584, 240 588, 125 570 C 48 558, 26 420, 42 200 Z"
+            fill="#57A8C4" opacity="0.30"/>
+      <path d="M 604 568 C 580 572, 554 572, 525 572 C 418 572, 244 576, 130 558 C 58 546, 38 416, 52 198 C 66 112, 172 68, 332 76 C 446 82, 522 66, 634 74 C 748 80, 868 48, 1076 56 C 1142 60, 1168 140, 1168 300 C 1168 432, 1154 522, 1098 540 C 1050 554, 1012 538, 978 518 M 882 522 C 858 548, 830 566, 776 568 C 756 569, 738 566, 722 560"
+            fill="none" stroke="#B6ECF4" stroke-width="2" stroke-dasharray="10,7" opacity="0.46"/>
 
-      <!-- Region Cartographic Labels (Directly on Map Parchment) -->
-      <text x="215" y="54" text-anchor="middle" font-family="Palatino, Georgia, serif" font-size="16" font-style="italic" font-weight="700" fill="#2E593D" opacity="0.82">I · Forest of Ten</text>
-      <text x="605" y="54" text-anchor="middle" font-family="Palatino, Georgia, serif" font-size="16" font-style="italic" font-weight="700" fill="#234F7D" opacity="0.82">II · River of Twenty</text>
-      <text x="820" y="50" text-anchor="middle" font-family="Palatino, Georgia, serif" font-size="16" font-style="italic" font-weight="700" fill="#7D4918" opacity="0.82">III · Highland Strongholds</text>
-      <text x="1072" y="608" text-anchor="middle" font-family="Palatino, Georgia, serif" font-size="16" font-style="italic" font-weight="700" fill="#8C2323" opacity="0.85">IV · Citadel to 100</text>
+      <g>
+        <ellipse cx="44" cy="584" rx="22" ry="8" fill="#57A8C4" opacity="0.4"/>
+        <path d="M 28 578 L 36 558 L 49 563 L 57 580 Z" fill="#8C6E4B" stroke="#2D2013" stroke-width="1.3"/>
+        <path d="M 32 570 L 42 558 L 53 570 Z" fill="#6CA157"/>
 
-      <!-- The Great River of Twenty (Layered Banks + Natural Flowing Water Ripples) -->
-      <path d="${riverD}" fill="none" stroke="#CBB58A" stroke-width="54" stroke-linecap="round"/>
-      <path d="${riverD}" fill="none" stroke="#85B9D6" stroke-width="40" stroke-linecap="round"/>
-      <path d="${riverD}" fill="none" stroke="url(#riverGrad)" stroke-width="34" stroke-linecap="round"/>
-      <g fill="none" stroke="#D8F0FB" stroke-width="1.8" stroke-linecap="round" opacity="0.72">
-        <path d="M 476 26 Q 486 58 492 86"/>
-        <path d="M 498 188 Q 490 226 484 260"/>
-        <path d="M 478 295 Q 482 332 490 368"/>
-        <path d="M 498 408 Q 508 446 504 484"/>
-        <path d="M 496 522 Q 488 564 476 604"/>
+        <ellipse cx="1164" cy="592" rx="26" ry="9" fill="#57A8C4" opacity="0.4"/>
+        <path d="M 1146 586 L 1155 564 L 1168 570 L 1179 588 Z" fill="#7D6041" stroke="#2D2013" stroke-width="1.3"/>
+        <path d="M 1150 577 L 1161 564 L 1174 577 Z" fill="#88929E"/>
       </g>
 
-      <!-- Supply Barge & Timber Dock on West Bank (Near Node 6) -->
-      <g transform="translate(454, 114)" stroke="#2C2219" stroke-width="1.3">
-        <rect x="-4" y="6" width="22" height="7" rx="1.5" fill="#9E6B3B"/>
-        <line x1="2" y1="6" x2="2" y2="16" stroke="#5A3921" stroke-width="2"/>
-        <line x1="12" y1="6" x2="12" y2="16" stroke="#5A3921" stroke-width="2"/>
-        <polygon points="18,10 38,10 34,19 22,19" fill="#7C4D28"/>
-        <rect x="23" y="5" width="9" height="5" rx="1" fill="#E5C794"/>
+      <!-- STRATUM 1: 2.5D SCULPTED CONTINENT SLAB & CUTAWAY CLIFF SKIRT -->
+      <path d="M 56 208 C 68 122, 174 78, 336 88 C 446 94, 522 76, 634 84 C 748 92, 868 56, 1074 66 C 1140 70, 1162 150, 1162 312 C 1162 456, 1150 542, 1094 558 C 1034 574, 996 534, 974 506 C 950 486, 914 486, 890 506 C 864 538, 842 578, 775 582 C 746 584, 724 560, 712 538 C 694 514, 638 514, 620 536 C 602 566, 578 588, 525 588 C 410 588, 248 592, 134 574 C 64 562, 44 432, 56 208 Z"
+            fill="#0D2638" opacity="0.44"/>
+
+      <!-- Extruded Vertical Cliff Skirt Wall Sculpted Smoothly Back at Estuary Beaches & Pirate Cove -->
+      <path d="M 56 446 L 56 476 C 62 556, 128 570, 246 580 C 350 588, 435 580, 525 582 C 578 582, 608 564, 620 536 L 620 510 C 606 534, 576 552, 525 552 C 435 550, 350 558, 246 550 C 128 540, 62 526, 56 446 Z"
+            fill="url(#cliffSkirtGrad)" stroke="#2F1E10" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M 712 512 L 712 538 C 728 562, 752 578, 776 578 C 845 574, 868 532, 890 504 L 890 480 C 868 504, 845 544, 776 548 C 750 548, 728 532, 712 512 Z"
+            fill="url(#cliffSkirtGrad)" stroke="#2F1E10" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M 974 480 L 974 504 C 1002 534, 1040 564, 1096 552 C 1146 538, 1160 486, 1162 426 L 1162 396 C 1154 468, 1142 508, 1096 522 C 1040 534, 1002 504, 974 480 Z"
+            fill="url(#cliffSkirtGrad)" stroke="#2F1E10" stroke-width="2" stroke-linejoin="round"/>
+
+      <g stroke="#3F2916" stroke-width="1.4" opacity="0.56">
+        <line x1="110" y1="538" x2="106" y2="564"/>
+        <line x1="175" y1="548" x2="172" y2="574"/>
+        <line x1="254" y1="552" x2="250" y2="579"/>
+        <line x1="335" y1="553" x2="332" y2="581"/>
+        <line x1="422" y1="551" x2="420" y2="580"/>
+        <line x1="515" y1="552" x2="515" y2="581"/>
+        <line x1="588" y1="542" x2="590" y2="569"/>
+        <line x1="744" y1="542" x2="746" y2="569"/>
+        <line x1="816" y1="542" x2="818" y2="569"/>
+        <line x1="868" y1="516" x2="870" y2="542"/>
+        <line x1="996" y1="496" x2="994" y2="524"/>
+        <line x1="1084" y1="524" x2="1086" y2="551"/>
+        <line x1="1138" y1="494" x2="1144" y2="520"/>
       </g>
 
-      <!-- Highland Cove & Pirate Waters (Bottom Right Inlet, Clear Below Node 15) -->
-      <path d="M 760 650 Q 805 568 880 578 Q 945 588 972 650 Z" fill="#CBB58A"/>
-      <path d="M 774 650 Q 815 580 882 590 Q 936 598 960 650 Z" fill="url(#riverGrad)" opacity="0.82"/>
-      <path d="M 812 622 Q 852 606 896 620" fill="none" stroke="#D8F0FB" stroke-width="1.6" stroke-linecap="round" opacity="0.7"/>
-      <!-- Anchored Pirate Skiff in Cove -->
-      <g transform="translate(866, 594)" stroke="#1E1812" stroke-width="1.3" stroke-linejoin="round">
-        <polygon points="10,0 10,16 20,13" fill="#982B2B"/>
-        <polygon points="10,2 10,14 2,13" fill="#F5E9CE"/>
-        <polygon points="1,17 21,17 17,23 5,23" fill="#6E4726"/>
+      <!-- Main Continent Surface (Natural Open Estuary Funnel & Crescent Pirate Cove Bay) -->
+      <path id="continent-top"
+            d="M 56 184 C 70 98, 174 56, 336 66 C 446 72, 522 58, 634 64 C 748 72, 868 34, 1074 44 C 1140 48, 1162 128, 1162 292 C 1162 422, 1150 506, 1094 522 C 1038 534, 1002 504, 974 480 C 950 468, 914 468, 890 480 C 868 504, 845 544, 776 548 C 750 548, 728 532, 712 512 C 696 492, 638 492, 620 510 C 606 534, 576 552, 525 552 C 410 550, 248 558, 134 540 C 64 528, 44 402, 56 184 Z"
+            fill="url(#continentBaseGrad)" stroke="#4E3B23" stroke-width="2.2" stroke-linejoin="round"/>
+
+      <!-- STRATUM 2: FOUR UNMISTAKABLE BIOME TERRAIN PLATES (FEATHERED & NATURAL CONTOURS) -->
+      <!-- Biome I: Emerald Deep Woodland Floor (Rolling Organic Contour) -->
+      <path d="M 56 184 C 70 98, 174 56, 336 66 C 362 68, 382 68, 396 68 C 416 140, 424 235, 392 340 C 362 435, 382 496, 410 550 C 296 554, 190 552, 134 540 C 64 528, 44 402, 56 184 Z"
+            fill="url(#forestBiomeGrad)"/>
+      <!-- Soft Woodland Blending Glades (Eliminates vertical band seam) -->
+      <ellipse cx="205" cy="365" rx="125" ry="135" fill="#82B661" opacity="0.38"/>
+      <ellipse cx="145" cy="240" rx="82" ry="66" fill="#467E3B" opacity="0.28"/>
+      <ellipse cx="320" cy="465" rx="68" ry="52" fill="#508B43" opacity="0.24"/>
+
+      <!-- Biome II: Sparkling River Valley Pasture -->
+      <path d="M 396 68 C 476 68, 558 58, 634 64 C 685 68, 720 68, 738 66 C 750 185, 744 268, 732 365 C 722 442, 722 492, 736 534 C 724 526, 718 518, 712 512 C 696 492, 638 492, 620 510 C 606 534, 576 552, 525 552 C 472 552, 438 552, 410 550 C 382 496, 362 435, 392 340 C 424 235, 416 140, 396 68 Z"
+            fill="url(#riverValleyGrad)"/>
+
+      <!-- Biome III: Elevated Sandstone & Terracotta Craggy Highlands Plateau (Including Full Dragon Caldera Foot) -->
+      <path d="M 738 66 C 845 58, 945 42, 1032 42 C 1022 92, 1006 122, 992 140 C 974 225, 976 325, 986 418 C 992 464, 996 488, 1002 500 C 992 492, 982 486, 974 480 C 950 468, 914 468, 890 480 C 868 504, 845 544, 776 548 C 760 548, 746 542, 736 534 C 722 492, 722 442, 732 365 C 744 268, 750 185, 738 66 Z"
+            fill="url(#highlandPlateGrad)"/>
+      <!-- Highland Inner Stepped Mesa Contour -->
+      <path d="M 762 138 Q 856 114 942 146 Q 970 285 952 446 Q 856 488 756 446 Q 744 285 762 138 Z"
+            fill="none" stroke="#8C592B" stroke-width="1.4" stroke-dasharray="6,4" opacity="0.45"/>
+
+      <!-- Biome IV: Slate-Granite Royal Citadel Terrace (Sweeping cleanly east of Dragon Peak) -->
+      <path d="M 1032 42 C 1048 42, 1062 43, 1074 44 C 1140 48, 1162 128, 1162 292 C 1162 422, 1150 506, 1094 522 C 1054 532, 1024 516, 1002 500 C 996 488, 992 464, 986 418 C 976 325, 974 225, 992 140 C 1006 122, 1022 92, 1032 42 Z"
+            fill="url(#citadelStoneGrad)"/>
+      <!-- Royal Courtyard Ashlar Flagstone Lines & Imperial Keep Ceremonial Plaza -->
+      <g stroke="#7A818D" stroke-width="0.9" opacity="0.34">
+        <line x1="990" y1="160" x2="1152" y2="160"/>
+        <line x1="984" y1="225" x2="1158" y2="225"/>
+        <line x1="982" y1="290" x2="1160" y2="290"/>
+        <line x1="984" y1="355" x2="1158" y2="355"/>
+        <line x1="988" y1="420" x2="1152" y2="420"/>
+        <line x1="1038" y1="75" x2="1038" y2="516"/>
+        <line x1="1096" y1="55" x2="1096" y2="518"/>
+      </g>
+      <circle cx="1068" cy="124" r="36" fill="#C4C9D0" stroke="#7A818D" stroke-width="1.3" opacity="0.55"/>
+      <circle cx="1068" cy="124" r="24" fill="none" stroke="#B68B30" stroke-width="1.2" stroke-dasharray="4,3" opacity="0.65"/>
+
+      <!-- Escarpment 1: Soft Mossy Woodland Rolling Edge (Act I -> Act II) -->
+      <path d="M 396 86 C 414 148, 422 238, 392 340 C 362 435, 382 496, 408 548" fill="none" stroke="#4D8040" stroke-width="6" stroke-linecap="round" opacity="0.28"/>
+      <path d="M 394 86 C 412 148, 420 238, 390 340 C 360 435, 380 496, 406 548" fill="none" stroke="#99CA76" stroke-width="2.5" stroke-linecap="round" opacity="0.72"/>
+
+      <!-- Escarpment 2: Tall 2.5D Highland Limestone Cliff Wall (Act II -> Act III) -->
+      <path d="M 741 88 C 752 185, 746 268, 734 365 C 724 442, 724 492, 738 538" fill="none" stroke="#3F2712" stroke-width="18" stroke-linecap="round" opacity="0.28"/>
+      <path d="M 738 88 C 749 185, 743 268, 731 365 C 721 442, 721 492, 735 538" fill="none" stroke="url(#escarpmentGrad)" stroke-width="13" stroke-linecap="round"/>
+      <path d="M 733 88 C 744 185, 738 268, 726 365 C 716 442, 716 492, 730 538" fill="none" stroke="#F0CE96" stroke-width="3.5" stroke-linecap="round"/>
+      <!-- Carved Stone Ascent Steps where Serpent Bridge climbs into Highlands -->
+      <g fill="#D5BC94" stroke="#3F2914" stroke-width="1.1">
+        <rect x="720" y="274" width="22" height="10" rx="2"/>
+        <rect x="725" y="263" width="22" height="9" rx="2"/>
+        <rect x="731" y="252" width="22" height="9" rx="2"/>
       </g>
 
-      <!-- Layered Storybook Mountain Ridges -->
-      <g stroke="#4A3B2B" stroke-width="1.5" stroke-linejoin="round">
-        <!-- Western Peaks (North of Act I) -->
-        <path d="M 135 168 L 178 96 L 214 140 L 256 72 L 308 168 Z" fill="#D8C5A6"/>
-        <path d="M 178 96 L 194 168 L 214 140 Z" fill="#B59F7E"/>
-        <path d="M 256 72 L 278 168 L 308 168 Z" fill="#B59F7E"/>
-        <path d="M 178 96 L 164 120 L 178 114 L 190 121 Z" fill="#FFFDF8"/>
-        <path d="M 256 72 L 238 104 L 255 97 L 273 106 Z" fill="#FFFDF8"/>
-
-        <!-- Highland Crags (Act III North) -->
-        <path d="M 690 132 L 732 68 L 764 108 L 802 58 L 848 132 Z" fill="#D5C09F"/>
-        <path d="M 732 68 L 748 132 L 764 108 Z" fill="#AE9774"/>
-        <path d="M 802 58 L 822 132 L 848 132 Z" fill="#AE9774"/>
-        <path d="M 802 58 L 787 84 L 802 78 L 816 86 Z" fill="#FFFDF8"/>
-
-        <!-- Dragon's Peak (Framing Left of Node 23) -->
-        <path d="M 902 142 L 948 56 L 976 96 L 1006 40 L 1048 142 Z" fill="#C4A07B"/>
-        <path d="M 1006 40 L 1024 142 L 1048 142 Z" fill="#9A7856"/>
-        <path d="M 1006 40 L 990 70 L 1006 64 L 1020 72 Z" fill="#FFE8BC"/>
-        <path d="M 1008 35 Q 1018 22 1010 14 Q 1022 10 1030 4" fill="none" stroke="#8C7B68" stroke-width="1.6" stroke-linecap="round" opacity="0.55"/>
+      <!-- Escarpment 3: Armored Citadel Crenellated Curtain Wall & Bastion Towers (Act III -> Act IV) -->
+      <g>
+        <path d="M 1030 52 C 1020 96, 1004 124, 990 140 C 972 225, 974 325, 984 418 C 990 464, 994 488, 1000 498" fill="none" stroke="#2D323A" stroke-width="14" stroke-linecap="round" opacity="0.34"/>
+        <path d="M 1032 52 C 1022 96, 1006 124, 992 140 C 974 225, 976 325, 986 418 C 992 464, 996 488, 1002 498" fill="none" stroke="#5A626E" stroke-width="10" stroke-linecap="round"/>
+        <path d="M 1032 52 C 1022 96, 1006 124, 992 140 C 974 225, 976 325, 986 418 C 992 464, 996 488, 1002 498" fill="none" stroke="#D5DAE0" stroke-width="4" stroke-dasharray="10,9" stroke-linecap="butt"/>
+        <!-- Corner Bastion Turrets along Citadel Curtain Wall -->
+        <rect x="984" y="132" width="16" height="18" rx="2" fill="#7C8592" stroke="#1E232B" stroke-width="1.3"/>
+        <polygon points="984,132 992,123 1000,132" fill="#8E2222" stroke="#1E232B" stroke-width="1.1"/>
+        <rect x="971" y="344" width="16" height="18" rx="2" fill="#7C8592" stroke="#1E232B" stroke-width="1.3"/>
+        <polygon points="971,344 979,335 987,344" fill="#8E2222" stroke="#1E232B" stroke-width="1.1"/>
+        <rect x="989" y="474" width="16" height="18" rx="2" fill="#7C8592" stroke="#1E232B" stroke-width="1.3"/>
+        <polygon points="989,474 997,465 1005,474" fill="#8E2222" stroke="#1E232B" stroke-width="1.1"/>
       </g>
 
-      <!-- Grand Royal Citadel (Framed Right of Node 23) -->
-      <g transform="translate(1118, 28)" stroke="#1E1812" stroke-width="1.6" stroke-linejoin="round">
-        <rect x="10" y="28" width="52" height="44" fill="#F2E5C9"/>
-        <rect x="2" y="16" width="16" height="56" fill="#E2D0AC"/>
-        <rect x="54" y="16" width="16" height="56" fill="#E2D0AC"/>
-        <rect x="25" y="10" width="22" height="62" fill="#FAF0DA"/>
-        <polygon points="0,16 10,2 20,16" fill="#982B2B"/>
-        <polygon points="52,16 62,2 72,16" fill="#982B2B"/>
-        <polygon points="22,10 36,-8 50,10" fill="#173156"/>
-        <circle cx="36" cy="26" r="5" fill="#F0C445"/>
-        <path d="M30 72 L30 50 A6 6 0 0 1 42 50 L42 72 Z" fill="#5A3921"/>
+      <!-- STRATUM 3: ORGANIC MEANDERING RIVER OF TWENTY & WOODLAND SPRING TRIBUTARY -->
+      <!-- Main Riverbank Gravel & Sandy Margin + Sloped Estuary Beaches -->
+      <path d="M 650 130 C 640 175, 610 205, 616 238 C 622 268, 666 286, 664 316 C 660 355, 610 384, 618 424 C 624 462, 630 488, 610 516 C 626 504, 638 498, 650 500 C 662 496, 672 496, 682 500 C 694 498, 706 504, 722 516 C 702 488, 700 458, 686 420 C 670 382, 712 350, 712 312 C 712 276, 678 262, 672 232 C 668 202, 686 172, 686 130 Z"
+            fill="#CCB382"/>
+
+      <!-- Western Woodland Tributary Starting from Forest Spring Tarn (366, 134) -> Barge Lagoon -> Stoneholm Bridge -> River -->
+      <path d="M 358 134 C 362 156, 386 174, 418 184 C 454 196, 488 202, 540 208 C 584 214, 618 218, 642 222 L 642 242 C 612 236, 578 232, 534 226 C 480 218, 444 212, 404 196 C 374 184, 348 164, 344 138 Z"
+            fill="#C8B180"/>
+      <path d="M 362 134 C 366 155, 390 172, 422 182 C 458 194, 492 200, 544 206 C 588 212, 622 216, 646 220 L 646 232 C 620 227, 584 222, 540 217 C 488 211, 452 205, 414 191 C 384 179, 358 160, 354 136 Z"
+            fill="#439AC0"/>
+      <ellipse cx="358" cy="136" rx="14" ry="7" fill="#77D4EB" stroke="#B79E72" stroke-width="2.5"/>
+      <ellipse cx="426" cy="186" rx="22" ry="11" fill="#4CA4CA" stroke="#B79E72" stroke-width="2.5"/>
+
+      <!-- Main Meandering River of Twenty (Single Continuous Feathered Outflow into Deep Sea — Zero Seam) -->
+      <path d="M 656 134 C 646 178, 616 208, 622 238 C 628 268, 674 286, 672 316 C 668 355, 620 384, 626 424 C 632 458, 636 486, 618 514 C 606 536, 594 562, 586 594 C 632 610, 700 610, 746 594 C 738 562, 726 536, 714 514 C 696 484, 692 456, 678 418 C 664 380, 704 350, 704 312 C 704 276, 670 262, 666 232 C 662 202, 680 172, 680 134 Z"
+            fill="url(#riverGrad)"/>
+      <!-- Deep Central Thalweg Water Shading (Fades smoothly out into the ocean bay) -->
+      <path d="M 668 138 C 656 182, 634 212, 640 240 C 648 270, 690 288, 688 318 C 684 356, 644 386, 650 426 C 656 462, 668 504, 666 562"
+            fill="none" stroke="url(#thalwegFadeGrad)" stroke-width="11" stroke-linecap="round"/>
+      <!-- Soft Dispersing Sea-Outflow Current Arcs -->
+      <path d="M 636 532 Q 666 542 696 532" fill="none" stroke="#B6ECF4" stroke-width="1.3" opacity="0.38" stroke-linecap="round"/>
+      <path d="M 622 550 Q 666 562 710 550" fill="none" stroke="#9ADCEB" stroke-width="1.1" opacity="0.24" stroke-linecap="round"/>
+
+      <!-- Northern Mountain Cascade Spring Pool -->
+      <path d="M 642 134 Q 668 110 694 134" fill="#7D6C55" stroke="#302418" stroke-width="1.5"/>
+      <path d="M 658 122 L 664 138 L 674 138 L 678 122 Z" fill="#A6ECFA"/>
+      <line x1="664" y1="123" x2="665" y2="137" stroke="#FFFFFF" stroke-width="1.8"/>
+      <line x1="672" y1="123" x2="671" y2="137" stroke="#FFFFFF" stroke-width="1.8"/>
+      <ellipse cx="668" cy="138" rx="18" ry="6" fill="#7AD4EC" opacity="0.88"/>
+
+      <!-- Pirate Cove Bay: Soft Crescent Harbor Beach & Feathered Radial Lagoon (No Polygon Boxes) -->
+      <path d="M 888 484 Q 931 460 974 484 Q 954 472 931 472 Q 908 472 888 484 Z"
+            fill="#E3C794" stroke="#7A5A32" stroke-width="1.1"/>
+      <ellipse cx="931" cy="504" rx="48" ry="26" fill="url(#coveShallowsGrad)"/>
+
+      <!-- STRATUM 4: SEGMENTED KING'S HIGHWAY -->
+      <g class="highway-shadow-under">
+        <path d="${highway.fullPathD}" fill="none" stroke="#4D371B" stroke-width="19" stroke-linecap="round" stroke-linejoin="round" opacity="0.34"/>
+      </g>
+      <g id="highway-segments-group">
+        ${roadSegmentsSVG}
       </g>
 
-      <!-- Storybook Woodland Groves (Clear of Pins) -->
-      <g stroke="#1E3522" stroke-width="1.3" stroke-linejoin="round">
-        <!-- West Pines -->
-        <polygon points="52,320 66,284 80,320" fill="#2E693E"/>
-        <polygon points="72,328 89,282 106,328" fill="#3D824F"/>
-        <polygon points="96,324 110,290 124,324" fill="#2E693E"/>
-        <!-- Southern Oaks -->
-        <path d="M 155 572 Q 145 552 162 544 Q 176 530 192 544 Q 208 552 198 572 Z" fill="#3E804C"/>
-        <path d="M 192 578 Q 186 562 200 556 Q 214 548 224 560 Q 232 568 224 578 Z" fill="#2F6A3D"/>
-        <!-- Eastern Forest Edge -->
-        <polygon points="348,432 362,396 376,432" fill="#2E693E"/>
-        <polygon points="368,438 384,394 400,438" fill="#468C56"/>
-        <!-- Highland Pines -->
-        <polygon points="712,256 726,220 740,256" fill="#2E693E"/>
-        <polygon points="732,262 748,218 764,262" fill="#3D824F"/>
-        <polygon points="840,214 853,182 866,214" fill="#2E693E"/>
+      <!-- STRATUM 5: FACETED 3D MOUNTAIN RANGES PER BIOME -->
+      <g stroke="#3A2D1F" stroke-width="1.5" stroke-linejoin="round">
+        <!-- Forest Northern Misty Peaks -->
+        <polygon points="154,132 212,108 278,134 228,144" fill="#3E5A28" opacity="0.25" stroke="none"/>
+        <path d="M 118 134 L 160 72 L 192 108 L 230 50 L 274 134 Z" fill="#8E9E7A"/>
+        <path d="M 160 72 L 174 134 L 192 108 Z" fill="#6D7D5C"/>
+        <path d="M 230 50 L 248 134 L 274 134 Z" fill="#637352"/>
+        <path d="M 230 50 L 216 74 L 230 68 L 244 76 Z" fill="#F2F7ED"/>
+
+        <!-- River Valley Headwater Peaks (Nestling the River Spring Pool at x=668, y=132) -->
+        <polygon points="586,128 656,108 730,132 670,138" fill="#4A3A28" opacity="0.22" stroke="none"/>
+        <path d="M 594 126 L 632 72 L 660 106 L 694 60 L 732 126 Z" fill="#C7C2AF"/>
+        <path d="M 632 72 L 646 126 L 660 106 Z" fill="#9A9481"/>
+        <path d="M 694 60 L 710 126 L 732 126 Z" fill="#8C8674"/>
+        <path d="M 694 60 L 680 84 L 694 78 L 707 86 Z" fill="#FFFDF8"/>
+
+        <!-- Highland Sandstone & Granite Crags (North Act III) -->
+        <polygon points="782,116 845,98 906,120 852,128" fill="#5A3718" opacity="0.24" stroke="none"/>
+        <path d="M 768 114 L 804 58 L 830 92 L 864 46 L 902 114 Z" fill="#C98E5B"/>
+        <path d="M 804 58 L 818 114 L 830 92 Z" fill="#9C6436"/>
+        <path d="M 864 46 L 882 114 L 902 114 Z" fill="#8E582C"/>
+        <path d="M 864 46 L 851 70 L 864 64 L 876 72 Z" fill="#FFF6E8"/>
+
+        <!-- Dragon's Obsidian Caldera Peak (Citadel Fortress North) -->
+        <polygon points="944,124 996,108 1044,126 998,136" fill="#2A1D20" opacity="0.32" stroke="none"/>
+        <path d="M 936 124 L 966 72 L 980 88 L 994 46 L 1032 124 Z" fill="#706266"/>
+        <path d="M 994 46 L 1012 124 L 1032 124 Z" fill="#4D4145"/>
+        <ellipse cx="994" cy="48" rx="8" ry="3.5" fill="#FF7B2E" stroke="#3A1D12" stroke-width="1.2"/>
+        <path d="M 990 48 L 985 70 L 993 64 L 998 76 L 1004 58 Z" fill="#D94B27" opacity="0.82" stroke="none"/>
       </g>
 
-      <!-- The King's Highway (Smooth Spline Crossing Only Over Stoneholm Bridge) -->
-      <path d="${pathD}" fill="none" stroke="#7A5F3D" stroke-width="15" stroke-linecap="round" opacity="0.42"/>
-      <path d="${pathD}" fill="none" stroke="#FBF2DE" stroke-width="9.5" stroke-linecap="round"/>
-      <path d="${pathD}" fill="none" stroke="#C69722" stroke-width="2.4" stroke-linecap="round" opacity="0.62"/>
-
-      <!-- Stoneholm Multi-Arch Bridge (Rendered Over River & Framing the Highway Crossing) -->
-      <g transform="translate(466, 138)" stroke="#2C2219" stroke-width="1.6" stroke-linejoin="round">
-        <rect x="0" y="8" width="76" height="24" rx="4" fill="#CFC4B4"/>
-        <rect x="4" y="2" width="12" height="7" fill="#E3DACB"/>
-        <rect x="32" y="2" width="12" height="7" fill="#E3DACB"/>
-        <rect x="60" y="2" width="12" height="7" fill="#E3DACB"/>
-        <path d="M 8 18 L 68 18" stroke="#FBF2DE" stroke-width="6" stroke-linecap="round"/>
-        <path d="M 8 18 L 68 18" stroke="#C69722" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
-        <path d="M12 32 A 10 10 0 0 1 32 32 M44 32 A 10 10 0 0 1 64 32" fill="#2D6288"/>
+      <!-- STRATUM 6: BIOME-SPECIFIC FLORA & GEOLOGY PROPS -->
+      <!-- BIOME I: Dense Lush Woodland Canopy & Apple Glades -->
+      ${this._mapPine(64, 212, 0.92)}
+      ${this._mapPine(84, 224, 1.06)}
+      ${this._mapOak(118, 206, 0.94, true)}
+      ${this._mapPine(146, 152, 0.9)}
+      ${this._mapPine(292, 212, 0.94)}
+      ${this._mapPine(66, 294, 0.98)}
+      ${this._mapPine(88, 308, 1.1)}
+      ${this._mapOak(168, 250, 0.96, true)}
+      ${this._mapOak(204, 228, 0.88, false)}
+      ${this._mapOak(76, 376, 1.04, true)}
+      ${this._mapOak(196, 396, 0.98, true)}
+      ${this._mapPine(154, 456, 0.92)}
+      ${this._mapPine(174, 468, 1.02)}
+      ${this._mapPine(272, 420, 0.94)}
+      ${this._mapPine(292, 434, 1.04)}
+      ${this._mapPine(328, 232, 0.96)}
+      ${this._mapOak(344, 290, 0.9, true)}
+      ${this._mapOak(334, 342, 0.95, true)}
+      ${this._mapPine(352, 412, 0.94)}
+      ${this._mapPine(370, 424, 1.06)}
+      ${this._mapOak(336, 488, 0.92, true)}
+      ${this._mapPine(388, 294, 0.92)}
+      ${this._mapPine(382, 474, 0.9)}
+      <!-- Fallen Mossy Log & Split-Rail Orchard Fence -->
+      <g stroke="#5E3C20" stroke-width="1.5" stroke-linecap="round">
+        <line x1="94" y1="408" x2="146" y2="400"/>
+        <line x1="94" y1="414" x2="146" y2="406"/>
+        <line x1="96" y1="402" x2="96" y2="419" stroke-width="2.4"/>
+        <line x1="120" y1="398" x2="120" y2="415" stroke-width="2.4"/>
+        <line x1="144" y1="395" x2="144" y2="412" stroke-width="2.4"/>
       </g>
 
-      <!-- Ornate Compass Rose (Top-Left Open Parchment) -->
-      <g transform="translate(72, 102)">
-        <circle cx="0" cy="0" r="34" fill="#FDF9F0" stroke="#8C6D46" stroke-width="2"/>
-        <circle cx="0" cy="0" r="28" fill="none" stroke="#C69722" stroke-width="1" opacity="0.7"/>
-        <polygon points="0,-30 6,-6 30,0 6,6 0,30 -6,6 -30,0 -6,-6" fill="#173156" stroke="#C69722" stroke-width="1.3"/>
-        <polygon points="0,-30 0,0 6,-6" fill="#F0C445"/>
-        <text x="0" y="-37" text-anchor="middle" font-family="Palatino, Georgia, serif" font-size="12" font-weight="800" fill="#173156">N</text>
+      <!-- BIOME II: Riverside Reeds, Cattails & Meadow Trees -->
+      ${this._mapOak(548, 146, 0.86, false)}
+      ${this._mapOak(524, 412, 0.88, false)}
+      ${this._mapPine(584, 355, 0.85)}
+      <g stroke="#4E6F3A" stroke-width="1.4" stroke-linecap="round">
+        <line x1="628" y1="364" x2="625" y2="351"/><circle cx="625" cy="350" r="1.6" fill="#6E4422" stroke="none"/>
+        <line x1="634" y1="366" x2="635" y2="352"/><circle cx="635" cy="351" r="1.6" fill="#6E4422" stroke="none"/>
+        <line x1="704" y1="360" x2="707" y2="347"/><circle cx="707" cy="346" r="1.6" fill="#6E4422" stroke="none"/>
+        <line x1="636" y1="498" x2="632" y2="484"/><circle cx="632" cy="483" r="1.6" fill="#6E4422" stroke="none"/>
+      </g>
+
+      <!-- BIOME III: Terracotta Highland Tors, Boulders & Bronze Heather Scrub -->
+      ${this._mapHighlandRock(774, 240, 0.96)}
+      ${this._mapHighlandRock(934, 224, 0.88)}
+      ${this._mapHighlandRock(762, 418, 0.92)}
+      ${this._mapHighlandRock(944, 386, 1.0)}
+      ${this._mapScrub(834, 250, 1.0)}
+      ${this._mapScrub(864, 392, 0.96)}
+      ${this._mapScrub(782, 376, 0.9)}
+      ${this._mapScrub(902, 424, 0.92)}
+
+      <!-- STRATUM 7: INTERACTIVE 2.5D STANDING LANDMARKS -->
+      <!-- 1. Timber Fort Palisade (Act I, near Node 3) -->
+      <g class="map-landmark-hit" data-landmark="fort" transform="translate(178, 476)" role="button" tabindex="0" aria-label="Timber Fort Palisade">
+        <ellipse cx="26" cy="22" rx="28" ry="8" fill="#2A2012" opacity="0.28"/>
+        <rect x="6" y="4" width="40" height="16" rx="2" fill="#8B5A32" stroke="#1E1812" stroke-width="1.4"/>
+        <rect x="18" y="-12" width="16" height="28" fill="#9E6A3D" stroke="#1E1812" stroke-width="1.4"/>
+        <polygon points="15,-12 26,-23 37,-12" fill="#234F82" stroke="#1E1812" stroke-width="1.3"/>
+        <line x1="26" y1="-23" x2="26" y2="-33" stroke="#1E1812" stroke-width="1.5"/>
+        <polygon points="26,-33 39,-29 26,-25" fill="#C9342D"/>
+      </g>
+
+      <!-- 2. Forest Giant Mossy Archway (Act I Boss Keep, near Node 5) -->
+      <g class="map-landmark-hit" data-landmark="giant" transform="translate(274, 82)" role="button" tabindex="0" aria-label="Forest Giant Mossy Arch">
+        <ellipse cx="22" cy="30" rx="24" ry="7" fill="#2A2012" opacity="0.3"/>
+        <path d="M 4 28 L 4 8 Q 22 -4 40 8 L 40 28 L 30 28 L 30 14 Q 22 8 14 14 L 14 28 Z" fill="#6F746A" stroke="#1E1812" stroke-width="1.5"/>
+        <path d="M 3 10 Q 15 0 28 4 Q 36 0 41 10" fill="#427B46" stroke="#1E3522" stroke-width="1.2"/>
+        <circle cx="16" cy="18" r="1.8" fill="#A9E86D"/>
+        <circle cx="28" cy="18" r="1.8" fill="#A9E86D"/>
+      </g>
+
+      <!-- 3. Supply Barge Quay (Act II, at Lagoon 402, 166) -->
+      <g class="map-landmark-hit" data-landmark="barge" transform="translate(396, 170)" role="button" tabindex="0" aria-label="Royal Supply Barge">
+        <rect x="-4" y="6" width="22" height="7" rx="1.5" fill="#9E6B3B" stroke="#2C2219" stroke-width="1.3"/>
+        <g class="map-barge-bob">
+          <ellipse cx="30" cy="20" rx="14" ry="4" fill="#184C6B" opacity="0.35"/>
+          <polygon points="16,10 42,10 37,20 21,20" fill="#7C4D28" stroke="#2C2219" stroke-width="1.3"/>
+          <rect x="22" y="4" width="12" height="7" rx="1" fill="#E8C688" stroke="#2C2219" stroke-width="1.1"/>
+        </g>
+      </g>
+
+      <!-- 4. Stoneholm Stone Bridge (Act II Node 7 Tributary Crossing, centered at 478, 206) -->
+      <g class="map-landmark-hit" data-landmark="bridge" transform="translate(454, 187)" role="button" tabindex="0" aria-label="Stoneholm Stone Bridge">
+        <rect x="2" y="24" width="46" height="8" rx="3" fill="#16425E" opacity="0.4"/>
+        <rect x="0" y="8" width="50" height="21" rx="3" fill="#CFC4B2" stroke="#2C2219" stroke-width="1.5"/>
+        <path d="M 9 29 A 7 7 0 0 1 23 29 M 27 29 A 7 7 0 0 1 41 29" fill="#2A7296" stroke="#2C2219" stroke-width="1.3"/>
+        <path d="M 3 18 L 47 18" stroke="#D7AA68" stroke-width="7.5" stroke-linecap="round"/>
+        <path d="M 9 14 L 9 22 M 20 14 L 20 22 M 31 14 L 31 22 M 41 14 L 41 22" stroke="#7A5229" stroke-width="1.3"/>
+      </g>
+
+      <!-- 5. Grand Serpent Viaduct Crossing & Spire (Between Act II Boss 11 & Act III Node 12) -->
+      <g class="map-landmark-hit" data-landmark="serpent" transform="translate(648, 274)" role="button" tabindex="0" aria-label="Grand Serpent River Crossing Bridge">
+        <rect x="2" y="28" width="84" height="10" rx="3" fill="#133D57" opacity="0.44"/>
+        <rect x="0" y="9" width="88" height="26" rx="4" fill="#D5C8B2" stroke="#2C2219" stroke-width="1.6"/>
+        <path d="M 10 35 A 11 11 0 0 1 32 35 M 54 35 A 11 11 0 0 1 76 35" fill="#1D5D82" stroke="#2C2219" stroke-width="1.4"/>
+        <rect x="4" y="3" width="14" height="7" fill="#EAE0CE" stroke="#2C2219" stroke-width="1.2"/>
+        <rect x="37" y="3" width="14" height="7" fill="#EAE0CE" stroke="#2C2219" stroke-width="1.2"/>
+        <rect x="70" y="3" width="14" height="7" fill="#EAE0CE" stroke="#2C2219" stroke-width="1.2"/>
+        <path d="M 4 20 L 84 20" stroke="#D9AD6A" stroke-width="9" stroke-linecap="round"/>
+        <path d="M 12 16 L 12 24 M 26 16 L 26 24 M 44 16 L 44 24 M 62 16 L 62 24 M 76 16 L 76 24" stroke="#7A5229" stroke-width="1.4"/>
+      </g>
+
+      <!-- 6. Blacksmith Forge & Foundry (Act III, right beside Node 15) -->
+      <g class="map-landmark-hit" data-landmark="forge" transform="translate(840, 444)" role="button" tabindex="0" aria-label="Royal Blacksmith Forge">
+        <ellipse cx="22" cy="28" rx="26" ry="7" fill="#2A2012" opacity="0.3"/>
+        <rect x="24" y="2" width="7" height="16" fill="#5D5650" stroke="#1E1812" stroke-width="1.2"/>
+        <rect x="6" y="10" width="28" height="18" fill="#C7B79E" stroke="#1E1812" stroke-width="1.4"/>
+        <polygon points="3,12 20,-2 37,12" fill="#9E3B2C" stroke="#1E1812" stroke-width="1.4"/>
+        <path d="M 14 28 L 14 19 A 5 5 0 0 1 24 19 L 24 28 Z" fill="#FF9233" stroke="#1E1812" stroke-width="1.2"/>
+      </g>
+
+      <!-- 7. Anchored Pirate Skiff Sitting Cleanly On Top of Pirate Cove Ripples -->
+      <g class="map-landmark-hit" data-landmark="pirate" transform="translate(917, 487)" role="button" tabindex="0" aria-label="Pirate Cove Skiff">
+        <g class="map-barge-bob">
+          <ellipse cx="14" cy="26" rx="22" ry="6" fill="none" stroke="#BAEBF7" stroke-width="1.1" opacity="0.48"/>
+          <ellipse cx="14" cy="25" rx="17" ry="4.5" fill="none" stroke="#E2F8FE" stroke-width="1.2" opacity="0.62"/>
+          <ellipse cx="14" cy="27" rx="15" ry="4" fill="#10364D" opacity="0.44"/>
+          <line x1="14" y1="-2" x2="14" y2="21" stroke="#3B2414" stroke-width="1.8"/>
+          <polygon points="14,-1 14,18 27,15" fill="#9B2626" stroke="#1E1812" stroke-width="1.2" stroke-linejoin="round"/>
+          <polygon points="14,2 14,16 2,14" fill="#F8EBD0" stroke="#1E1812" stroke-width="1.2" stroke-linejoin="round"/>
+          <polygon points="1,20 27,20 22,27 6,27" fill="#6E4726" stroke="#1E1812" stroke-width="1.4" stroke-linejoin="round"/>
+        </g>
+      </g>
+
+      <!-- 8. Iron Golem Bastion Gatehouse (Piercing Citadel Curtain Wall at Node 18) -->
+      <g class="map-landmark-hit" data-landmark="golem" transform="translate(966, 174)" role="button" tabindex="0" aria-label="Iron Golem Citadel Gatehouse">
+        <ellipse cx="18" cy="28" rx="20" ry="6" fill="#2A2012" opacity="0.3"/>
+        <rect x="4" y="6" width="28" height="22" rx="2" fill="#707D88" stroke="#1E1812" stroke-width="1.5"/>
+        <rect x="2" y="2" width="8" height="6" fill="#8C9AA6" stroke="#1E1812" stroke-width="1.2"/>
+        <rect x="14" y="2" width="8" height="6" fill="#8C9AA6" stroke="#1E1812" stroke-width="1.2"/>
+        <rect x="26" y="2" width="8" height="6" fill="#8C9AA6" stroke="#1E1812" stroke-width="1.2"/>
+        <rect x="12" y="15" width="12" height="13" rx="2" fill="#2E363E" stroke="#1E1812" stroke-width="1.2"/>
+      </g>
+
+      <!-- 9. Act IV Signal Beacon Braziers (Inside Citadel Fortress Beside Node 19) -->
+      <g class="map-landmark-hit ${beaconsLit ? "beacons-lit" : ""}" id="map-signal-beacons" data-landmark="beacon" role="button" tabindex="0" aria-label="Citadel Signal Beacons">
+        <g transform="translate(1062, 286)">
+          <ellipse cx="6" cy="14" rx="9" ry="3.5" fill="#2A2012" opacity="0.3"/>
+          <path d="M 1 14 L 4 4 M 11 14 L 8 4" stroke="#36322E" stroke-width="2" stroke-linecap="round"/>
+          <polygon points="0,4 12,4 10,8 2,8" fill="#4A4540" stroke="#1E1812" stroke-width="1.1"/>
+          <path class="map-beacon-flame" d="M 6 -9 C 1 -2 2 4 6 5 C 10 4 11 -2 6 -9 Z" fill="#FF962E" stroke="#8C2610" stroke-width="0.9"/>
+        </g>
+        <g transform="translate(1078, 336)">
+          <ellipse cx="6" cy="14" rx="9" ry="3.5" fill="#2A2012" opacity="0.3"/>
+          <path d="M 1 14 L 4 4 M 11 14 L 8 4" stroke="#36322E" stroke-width="2" stroke-linecap="round"/>
+          <polygon points="0,4 12,4 10,8 2,8" fill="#4A4540" stroke="#1E1812" stroke-width="1.1"/>
+          <path class="map-beacon-flame" d="M 6 -9 C 1 -2 2 4 6 5 C 10 4 11 -2 6 -9 Z" fill="#FF962E" stroke="#8C2610" stroke-width="0.9"/>
+        </g>
+      </g>
+
+      <!-- 10. Watchtower Clock Spire (Act IV East Wall beside Node 21) -->
+      <g class="map-landmark-hit" data-landmark="clock" transform="translate(1124, 334)" role="button" tabindex="0" aria-label="Watchtower Clock">
+        <ellipse cx="12" cy="40" rx="15" ry="5" fill="#2A2012" opacity="0.32"/>
+        <rect x="3" y="10" width="18" height="30" fill="#E3D4B6" stroke="#1E1812" stroke-width="1.4"/>
+        <polygon points="0,10 12,-5 24,10" fill="#173156" stroke="#1E1812" stroke-width="1.3"/>
+        <circle cx="12" cy="19" r="5.5" fill="#FFFDF8" stroke="#C69722" stroke-width="1.4"/>
+        <line x1="12" y1="19" x2="12" y2="15" stroke="#982B2B" stroke-width="1.3"/>
+        <line x1="12" y1="19" x2="15.5" y2="19" stroke="#173156" stroke-width="1.4"/>
+      </g>
+
+      <!-- 11. Grand Imperial Citadel (Crowning Act IV Summit Right of Node 23) -->
+      <g class="map-landmark-hit" data-landmark="citadel" transform="translate(1098, 22)" role="button" tabindex="0" aria-label="Grand Royal Citadel">
+        <ellipse cx="36" cy="72" rx="44" ry="11" fill="#2A2012" opacity="0.32"/>
+        <rect x="10" y="28" width="52" height="44" fill="#F2E5C9" stroke="#1E1812" stroke-width="1.5"/>
+        <rect x="2" y="16" width="16" height="56" fill="#DFCCAA" stroke="#1E1812" stroke-width="1.5"/>
+        <rect x="54" y="16" width="16" height="56" fill="#DFCCAA" stroke="#1E1812" stroke-width="1.5"/>
+        <rect x="25" y="10" width="22" height="62" fill="#FAF0DA" stroke="#1E1812" stroke-width="1.5"/>
+        <polygon points="0,16 10,2 20,16" fill="#982B2B" stroke="#1E1812" stroke-width="1.3"/>
+        <polygon points="52,16 62,2 72,16" fill="#982B2B" stroke="#1E1812" stroke-width="1.3"/>
+        <polygon points="22,10 36,-8 50,10" fill="#173156" stroke="#1E1812" stroke-width="1.3"/>
+        <line x1="36" y1="-8" x2="36" y2="-16" stroke="#1E1812" stroke-width="1.4"/>
+        <polygon points="36,-16 48,-13 36,-10" fill="#F0C445"/>
+        <circle cx="36" cy="26" r="5" fill="#F0C445" stroke="#1E1812" stroke-width="1"/>
+        <path d="M30 72 L30 50 A6 6 0 0 1 42 50 L42 72 Z" fill="#5A3921" stroke="#1E1812" stroke-width="1.3"/>
+      </g>
+
+      <!-- 12. Ornate Gilded Compass Rose (Top-West Ocean) -->
+      <g class="map-landmark-hit" data-landmark="compass" transform="translate(68, 120)" role="button" tabindex="0" aria-label="Cartographer Compass Rose">
+        <circle cx="2" cy="4" r="34" fill="#0D2638" opacity="0.35"/>
+        <circle cx="0" cy="0" r="33" fill="#FDF9F0" stroke="#8C6D46" stroke-width="2.2"/>
+        <circle cx="0" cy="0" r="27" fill="none" stroke="#C69722" stroke-width="1.1" opacity="0.75"/>
+        <g id="compass-needle">
+          <polygon points="0,-29 6,-6 29,0 6,6 0,29 -6,6 -29,0 -6,-6" fill="#173156" stroke="#C69722" stroke-width="1.2"/>
+          <polygon points="0,-29 0,0 6,-6" fill="#F0C445"/>
+          <polygon points="0,29 0,0 -6,6" fill="#9B2424"/>
+        </g>
+        <text x="0" y="-37" text-anchor="middle" font-family="Palatino, Georgia, serif" font-size="11.5" font-weight="800" fill="#FFF7E2" stroke="#173850" stroke-width="3" paint-order="stroke">N</text>
+      </g>
+
+      <!-- STRATUM 8: CARVED ACT CARTOUCHE BANNERS & PLACE NAMES -->
+      ${this._mapCartouche(180, 192, "I · FOREST OF TEN", "#FBF4E1", "#246B43", "#1A4D30")}
+      ${this._mapCartouche(524, 102, "II · RIVER OF TWENTY", "#F4FAFF", "#1F5E8E", "#144166")}
+      ${this._mapCartouche(818, 594, "III · HIGHLAND STRONGHOLDS", "#FFF5E6", "#9E531A", "#68330D")}
+      ${this._mapCartouche(1062, 558, "IV · CITADEL TO 100", "#FFF0EE", "#962222", "#691212")}
+
+      <g font-family="Palatino, Georgia, serif" font-style="italic" font-weight="800" paint-order="stroke">
+        <text x="480" y="182" text-anchor="middle" font-size="10" fill="#1E2B38" stroke="#F4FAFC" stroke-width="3">Stoneholm Bridge</text>
+        <text x="692" y="266" text-anchor="middle" font-size="10" fill="#1E2B38" stroke="#F4FAFC" stroke-width="3">Serpent Crossing</text>
+        <text x="932" y="544" text-anchor="middle" font-size="10.5" fill="#DFF5FC" stroke="#163D57" stroke-width="3">Pirate Cove</text>
       </g>
     </svg>`;
   },

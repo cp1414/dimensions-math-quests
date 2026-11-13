@@ -87,6 +87,7 @@ def run_grade1_jsc_audit():
     load("shared/audio-engine.js");
     load("grades/g1/curriculum.js");
     load("grades/g1/visuals.js");
+    load("grades/g1/map-fx.js");
     load("grades/g1/app.js");
 
     var errors = [];
@@ -445,7 +446,7 @@ def verify_ui_and_compliance(g1_positions, k_positions):
     files_to_scan = [
         "index.html", "hub/hub.css", "hub/hub-art.js", "hub/hub.js", "manifest.json", "sw.js",
         "shared/pwa-register.js", "shared/grades-registry.js", "shared/audio-engine.js", "shared/cpa-primitives.js",
-        "grades/g1/index.html", "grades/g1/styles.css", "grades/g1/curriculum.js", "grades/g1/visuals.js", "grades/g1/app.js",
+        "grades/g1/index.html", "grades/g1/styles.css", "grades/g1/curriculum.js", "grades/g1/visuals.js", "grades/g1/map-fx.js", "grades/g1/app.js",
         "grades/k/index.html", "grades/k/styles.css", "grades/k/curriculum.js", "grades/k/visuals.js", "grades/k/garden3d.js", "grades/k/app.js",
     ]
 

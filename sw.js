@@ -1,4 +1,4 @@
-const CACHE_NAME = "hearth-wonder-math-hub-v11";
+const CACHE_NAME = "hearth-wonder-math-hub-v18";
 const NETWORK_TIMEOUT_MS = 2500;
 const CORE_SHELL_ASSETS = [
   "./",

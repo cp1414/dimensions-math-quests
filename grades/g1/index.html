@@ -55,11 +55,28 @@
     <!-- ==================== VIEW 1: KINGDOM OVERWORLD MAP ==================== -->
     <section class="map-screen active" id="map-screen">
       <div class="map-frame-border">
-        <div class="map-canvas-wrapper">
+        <div class="map-canvas-wrapper" id="map-canvas-wrapper">
+          <nav class="map-realm-bar" id="map-realm-bar" aria-label="Kingdom Realms">
+            <button type="button" class="realm-tab active" data-realm="all">All Realm</button>
+            <button type="button" class="realm-tab" data-realm="1">I. Forest of Ten</button>
+            <button type="button" class="realm-tab" data-realm="2">II. River of Twenty</button>
+            <button type="button" class="realm-tab" data-realm="3">III. Highlands</button>
+            <button type="button" class="realm-tab" data-realm="4">IV. Citadel to 100</button>
+          </nav>
+
+          <div class="map-camera-controls" aria-label="Map Zoom Controls">
+            <button type="button" class="map-cam-btn" id="btn-zoom-out" title="Zoom Out">−</button>
+            <button type="button" class="map-cam-btn map-cam-fit" id="btn-zoom-reset" title="Fit Full Realm">Fit</button>
+            <button type="button" class="map-cam-btn" id="btn-zoom-in" title="Zoom In">+</button>
+          </div>
+
           <div class="map-zoom-layer" id="map-zoom-layer">
             <div id="svg-map-container"></div>
+            <canvas id="map-atmosphere-canvas" class="map-atmosphere-canvas" aria-hidden="true"></canvas>
+            <div id="map-vellum-grain" class="map-vellum-grain" aria-hidden="true"></div>
             <div id="map-nodes-overlay" class="map-nodes-overlay"></div>
             <div id="squire-map-token" class="squire-map-token">
+              <div class="squire-token-shadow"></div>
               <div class="squire-token-halo"></div>
               <div class="squire-token-figure" id="squire-svg-holder"></div>
             </div>
@@ -69,6 +86,10 @@
 
         <!-- Bottom Selected Level Bar -->
         <div class="map-bottom-dock">
+          <div class="dock-step-controls" aria-label="Step Between Missions">
+            <button type="button" class="btn-dock-step" id="btn-prev-mission" title="Previous Mission">← Prev</button>
+            <button type="button" class="btn-dock-step" id="btn-next-mission" title="Next Mission">Next →</button>
+          </div>
           <div class="dock-node-badge" id="dock-node-icon"></div>
           <div class="dock-node-info">
             <span class="dock-act-tag" id="dock-act-tag">Act I · Forest of Ten</span>
@@ -291,6 +312,7 @@
   <script defer src="../../shared/audio-engine.js"></script>
   <script defer src="curriculum.js"></script>
   <script defer src="visuals.js"></script>
+  <script defer src="map-fx.js"></script>
   <script defer src="app.js"></script>
 </body>
 </html>
