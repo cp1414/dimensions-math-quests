@@ -168,17 +168,24 @@ const App = {
   // MOUNT ALL STATIC CUSTOM SVG ICONS (Zero Emojis)
   // --------------------------------------------------------------------------
   mountStaticIcons() {
-    document.getElementById("header-crest-icon").innerHTML = Visuals.getIconSVG("crest", 32);
-    document.getElementById("icon-map").innerHTML = Visuals.getIconSVG("map", 20);
-    document.getElementById("icon-abacus").innerHTML = Visuals.getIconSVG("abacus", 20);
-    document.getElementById("icon-crown").innerHTML = Visuals.getIconSVG("crown", 20);
-    document.getElementById("icon-reset").innerHTML = Visuals.getIconSVG("reset", 20);
-    const resetLevelIcon = document.getElementById("icon-reset-level");
-    if (resetLevelIcon) resetLevelIcon.innerHTML = Visuals.getIconSVG("reset", 20);
-    document.getElementById("icon-scroll").innerHTML = Visuals.getIconSVG("scroll", 20);
-    document.getElementById("merlin-portrait-holder").innerHTML = Visuals.getMerlinPortraitSVG();
-    document.getElementById("squire-svg-holder").innerHTML = Visuals.getSquireSVG();
-    document.getElementById("victory-seal-svg").innerHTML = Visuals.getIconSVG("seal", 76);
+    const setIcon = (id, key, size) => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = Visuals.getIconSVG(key, size);
+    };
+    setIcon("header-crest-icon", "crest", 32);
+    setIcon("icon-map", "map", 20);
+    setIcon("icon-abacus", "abacus", 20);
+    setIcon("icon-crown", "crown", 20);
+    setIcon("icon-reset", "reset", 20);
+    setIcon("icon-reset-level", "reset", 16);
+    setIcon("icon-scroll", "scroll", 20);
+    setIcon("icon-replay-voice", "speakerOn", 18);
+    const merlinEl = document.getElementById("merlin-portrait-holder");
+    if (merlinEl) merlinEl.innerHTML = Visuals.getMerlinPortraitSVG();
+    const squireEl = document.getElementById("squire-svg-holder");
+    if (squireEl) squireEl.innerHTML = Visuals.getSquireSVG();
+    const sealEl = document.getElementById("victory-seal-svg");
+    if (sealEl) sealEl.innerHTML = Visuals.getIconSVG("seal", 76);
   },
 
   // --------------------------------------------------------------------------
@@ -187,8 +194,28 @@ const App = {
   // --------------------------------------------------------------------------
   audioBufferCache: {},
   currentBufferSource: null,
+  lastProblemVoiceKey: null,
+  lastProblemVoiceFallback: null,
+  voiceSpeakingTimer: null,
+
+  setAldousSpeaking(isSpeaking) {
+    if (this.voiceSpeakingTimer) {
+      clearTimeout(this.voiceSpeakingTimer);
+      this.voiceSpeakingTimer = null;
+    }
+    const banner = document.getElementById("merlin-banner");
+    if (banner) banner.classList.toggle("speaking", !!isSpeaking);
+    if (isSpeaking) {
+      this.voiceSpeakingTimer = setTimeout(() => {
+        const b = document.getElementById("merlin-banner");
+        if (b) b.classList.remove("speaking");
+        this.voiceSpeakingTimer = null;
+      }, 4200);
+    }
+  },
 
   stopCurrentAudio() {
+    this.setAldousSpeaking(false);
     try {
       if (this.currentBufferSource) {
         this.currentBufferSource.stop();
@@ -205,24 +232,33 @@ const App = {
   },
 
   playVoiceClip(clipKey, fallbackKey = null) {
+    if (this.state.studioMode === "trial") {
+      this.lastProblemVoiceKey = clipKey;
+      this.lastProblemVoiceFallback = fallbackKey;
+    }
     if (!this.state.soundEnabled) return;
     this.stopCurrentAudio();
+    this.setAldousSpeaking(true);
 
     const playWithAudioElement = (keyToPlay, fbKey) => {
       try {
         const audio = new Audio(`audio/${keyToPlay}.wav`);
         audio.volume = 0.95;
+        audio.addEventListener("ended", () => this.setAldousSpeaking(false), { once: true });
         if (fbKey) {
           audio.addEventListener("error", () => {
             const fb = new Audio(`audio/${fbKey}.wav`);
             fb.volume = 0.95;
+            fb.addEventListener("ended", () => this.setAldousSpeaking(false), { once: true });
             this.currentAudio = fb;
-            fb.play().catch(() => {});
+            fb.play().catch(() => this.setAldousSpeaking(false));
           }, { once: true });
         }
         this.currentAudio = audio;
-        audio.play().catch(() => {});
-      } catch (e) {}
+        audio.play().catch(() => this.setAldousSpeaking(false));
+      } catch (e) {
+        this.setAldousSpeaking(false);
+      }
     };
 
     try {
@@ -239,12 +275,14 @@ const App = {
       const playDecodedBuffer = (buf) => {
         if (!this.state.soundEnabled) return;
         this.stopCurrentAudio();
+        this.setAldousSpeaking(true);
         const source = ctx.createBufferSource();
         const gainNode = ctx.createGain();
         gainNode.gain.value = 0.95;
         source.buffer = buf;
         source.connect(gainNode);
         gainNode.connect(ctx.destination);
+        source.onended = () => this.setAldousSpeaking(false);
         this.currentBufferSource = source;
         source.start(0);
       };
@@ -273,6 +311,35 @@ const App = {
         });
     } catch (e) {
       playWithAudioElement(clipKey, fallbackKey);
+    }
+  },
+
+  replayCurrentVoice() {
+    if (!this.state.soundEnabled) {
+      this.state.soundEnabled = true;
+      this.saveState();
+      this.updateHeaderStatus();
+    }
+
+    if (this.state.studioMode === "trial" && this.lastProblemVoiceKey) {
+      this.playVoiceClip(this.lastProblemVoiceKey, this.lastProblemVoiceFallback);
+      return;
+    }
+
+    const node = this.getNode(this.state.selectedNodeId);
+    let specType = null;
+    if (this.state.studioMode === "learn" && node && node.learnSteps) {
+      const step = node.learnSteps[Math.max(0, Math.min(node.learnSteps.length - 1, this.state.learnStepIndex))];
+      specType = step && step.visualSpec && step.visualSpec.type;
+    } else if (this.currentProblem && this.currentProblem.visualSpec) {
+      specType = this.currentProblem.visualSpec.type;
+    }
+
+    const topicCoach = specType && MASTER_ALDOUS_VOICES && MASTER_ALDOUS_VOICES.topicCoach && MASTER_ALDOUS_VOICES.topicCoach[specType];
+    if (topicCoach) {
+      this.playVoiceClip(topicCoach.key, topicCoach.fallback);
+    } else {
+      this.playVoiceClip("encourage_0");
     }
   },
 
@@ -354,21 +421,31 @@ const App = {
     const overlay = document.getElementById("map-nodes-overlay");
     overlay.innerHTML = "";
 
+    const nextQuestNode = CURRICULUM_NODES.find(n => !this.getProgress(n.id).mastered);
+    const nextQuestId = nextQuestNode ? nextQuestNode.id : null;
+
     CURRICULUM_NODES.forEach(node => {
       const prog = this.getProgress(node.id);
       const pin = document.createElement("div");
       pin.className = `map-node-pin act-${node.act || 1}`;
       pin.setAttribute("role", "button");
       pin.setAttribute("tabindex", "0");
-      pin.setAttribute("aria-label", `Mission ${node.id}: ${node.title}${prog.mastered ? " (Mastered)" : ""}`);
+      pin.setAttribute("aria-label", `Mission ${node.id}: ${node.title}${prog.mastered ? " (Mastered)" : node.id === nextQuestId ? " (Next Quest)" : ""}`);
       if (node.isBoss) pin.classList.add("boss-node");
       if (node.id === this.state.selectedNodeId) pin.classList.add("selected");
-      if (prog.mastered) pin.classList.add("mastered");
+      if (prog.mastered) {
+        pin.classList.add("mastered");
+      } else if (node.id === nextQuestId) {
+        pin.classList.add("next-quest");
+      } else {
+        pin.classList.add("upcoming");
+      }
+      if (node.mapPos.y >= 65) pin.classList.add("label-above");
 
       pin.style.left = `${node.mapPos.x}%`;
       pin.style.top = `${node.mapPos.y}%`;
 
-      const pinGraphic = this.getNodeIconSVG(node, 26);
+      const pinGraphic = this.getNodeIconSVG(node, node.isBoss ? 30 : 26);
 
       pin.innerHTML = `
         <div class="node-medallion">
@@ -426,9 +503,27 @@ const App = {
 
   updateMapBottomDock() {
     const node = this.getNode(this.state.selectedNodeId);
+    const prog = this.getProgress(node.id);
+    const actLabels = {
+      1: "Act I · Forest of Ten",
+      2: "Act II · River of Twenty",
+      3: "Act III · Highland Strongholds",
+      4: "Act IV · Citadel to 100"
+    };
+    const actTagEl = document.getElementById("dock-act-tag");
+    if (actTagEl) {
+      const actNum = node.act || 1;
+      const gradeSuffix = node.gradeTag ? ` · ${node.gradeTag}` : "";
+      actTagEl.textContent = `${actLabels[actNum] || actLabels[1]}${gradeSuffix}`;
+      actTagEl.className = `dock-act-tag act-${actNum}`;
+    }
     document.getElementById("dock-node-icon").innerHTML = this.getNodeIconSVG(node, 36);
     document.getElementById("dock-node-title").textContent = `${node.id}. ${node.title}`;
     document.getElementById("dock-node-desc").textContent = node.shortDesc;
+    const enterBtnSpan = document.getElementById("btn-enter-node-label");
+    if (enterBtnSpan) {
+      enterBtnSpan.textContent = prog.mastered ? "Replay Level →" : (node.isBoss ? "Enter Boss Trial →" : "Start Level →");
+    }
   },
 
   zoomIntoStronghold(nodeId) {
@@ -502,20 +597,15 @@ const App = {
       document.getElementById("tabletop-screen").classList.toggle("active", viewName === "tabletop");
 
       // Context-aware top bar buttons:
-      // - On Home Map ("map"): show Math Blocks, Mission Control, Reset Game; hide "← Kingdom Map" & "Reset Level"
-      // - In Level ("studio"): show "← Kingdom Map" & "Reset Level"; hide Math Blocks, Mission Control, Reset Game
-      // - In Math Blocks ("tabletop"): show "← Kingdom Map"; hide "Reset Level", Math Blocks, Mission Control, Reset Game
+      // - On Home Map ("map"): show Math Blocks & Mission Control; hide "← Kingdom Map"
+      // - In Level ("studio") / Math Blocks ("tabletop"): show "← Kingdom Map"; hide Math Blocks & Mission Control
       const mapBtn = document.getElementById("btn-map-view");
-      const resetLevelBtn = document.getElementById("btn-reset-level");
       const tabletopBtn = document.getElementById("btn-tabletop");
       const placementBtn = document.getElementById("btn-placement");
-      const quickResetBtn = document.getElementById("btn-quick-reset");
 
       if (mapBtn) mapBtn.classList.toggle("hidden", viewName === "map");
-      if (resetLevelBtn) resetLevelBtn.classList.toggle("hidden", viewName !== "studio");
       if (tabletopBtn) tabletopBtn.classList.toggle("hidden", viewName !== "map");
       if (placementBtn) placementBtn.classList.toggle("hidden", viewName !== "map");
-      if (quickResetBtn) quickResetBtn.classList.toggle("hidden", viewName !== "map");
 
       if (viewName === "map") {
         this.renderMapAll();
@@ -541,9 +631,16 @@ const App = {
     const prog = this.getProgress(nodeId);
     prog.stars = prog.stars || (prog.mastered ? 1 : 0);
 
+    const studioScreen = document.getElementById("studio-screen");
+    if (studioScreen) studioScreen.classList.toggle("boss-encounter", !!node.isBoss);
+
     document.getElementById("studio-node-name").textContent = `${node.id}. ${node.title}`;
     const chTagEl = document.getElementById("studio-chapter-tag");
-    if (chTagEl) chTagEl.textContent = node.gradeTag || "";
+    if (chTagEl) {
+      chTagEl.textContent = node.isBoss
+        ? `Royal Boss Trial · ${node.gradeTag || ""}`
+        : (node.gradeTag || "");
+    }
 
     // Populate Right-Hand Parent Sidebar
     document.getElementById("pg-level-title").textContent = `${node.id}. ${node.title} (${node.gradeTag})`;
@@ -608,36 +705,19 @@ const App = {
     const node = this.getNode(this.state.selectedNodeId);
     const prog = this.getProgress(node.id);
     const row = document.getElementById("shields-row");
-    const tierBadgeLabels = {
-      1: "Tier 1 · Picture Support",
-      2: "Tier 2 · Stepping Up",
-      3: "Tier 3 · Mental Math!"
-    };
-    const badgeBg = prog.tier === 3 ? "#982B2B" : prog.tier === 2 ? "#B85D19" : "#24578D";
     const starsCount = Math.min(3, prog.stars || (prog.mastered ? 1 : 0));
-    let starsHTML = `<div style="display:inline-flex;align-items:center;gap:2px;background:#FFFDF7;border:1.5px solid #C59B27;border-radius:999px;padding:2px 8px;" title="Unit Mastery Stars (${starsCount}/3 Quests Completed)">`;
+    let starsHTML = `<div class="stars-crest-strip" title="Unit Mastery Stars (${starsCount}/3 Quests Completed)">`;
     for (let s = 1; s <= 3; s++) {
-      starsHTML += `<span style="display:inline-flex;width:16px;height:16px;">${Visuals.getIconSVG(s <= starsCount ? "star" : "starEmpty", 16)}</span>`;
+      starsHTML += `<span style="display:inline-flex;width:18px;height:18px;">${Visuals.getIconSVG(s <= starsCount ? "star" : "starEmpty", 18)}</span>`;
     }
     starsHTML += `</div>`;
 
     row.innerHTML = `
-      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
         ${Visuals.renderMissionEncounter(node.missionType || "bandits", prog.shields)}
         ${starsHTML}
-        <button id="btn-inline-tier-badge" title="Click to cycle difficulty tier (Tier 1 -> Tier 2 -> Tier 3 Mental Math)" style="background:${badgeBg};color:#FFF;border:2px solid #E5B93C;border-radius:999px;padding:4px 12px;font-family:var(--font-sans);font-size:12px;font-weight:800;cursor:pointer;letter-spacing:0.02em;">
-          ${tierBadgeLabels[prog.tier] || "Tier 1"}
-        </button>
       </div>
     `;
-    const badgeBtn = document.getElementById("btn-inline-tier-badge");
-    if (badgeBtn) {
-      badgeBtn.onclick = () => {
-        prog.tier = prog.tier === 1 ? 2 : prog.tier === 2 ? 3 : 1;
-        this.saveState();
-        this.setStudioMode("trial", true);
-      };
-    }
   },
 
   setStudioMode(mode, preserveTier = false) {
@@ -728,9 +808,12 @@ const App = {
     const dotsContainer = document.getElementById("learn-step-dots");
     dotsContainer.innerHTML = "";
     steps.forEach((_, i) => {
-      const dot = document.createElement("span");
+      const dot = document.createElement("button");
+      dot.type = "button";
       const isCompleted = this.completedLearnSteps && this.completedLearnSteps[i];
       dot.className = `step-dot ${i === idx ? "active" : ""} ${isCompleted ? "completed" : ""}`;
+      dot.textContent = String(i + 1);
+      dot.setAttribute("aria-label", `Lesson Step ${i + 1} of ${steps.length}`);
       dot.addEventListener("click", () => {
         this.state.learnStepIndex = i;
         this.renderLearnStep();
@@ -742,7 +825,7 @@ const App = {
     const nextBtn = document.getElementById("btn-learn-next");
     prevBtn.disabled = idx === 0;
     prevBtn.style.opacity = idx === 0 ? "0.35" : "1";
-    nextBtn.textContent = idx === steps.length - 1 ? "Start Playing ->" : "Next Step ->";
+    nextBtn.textContent = idx === steps.length - 1 ? "Start Playing →" : "Next Step →";
     this.updateLiveParentCoach();
   },
 
@@ -837,6 +920,8 @@ const App = {
 
     this.currentProblem = this.generateUniqueProblem(node, prog.tier);
     this.missedCurrentProblem = false;
+    this.lastProblemVoiceKey = null;
+    this.lastProblemVoiceFallback = null;
 
     // In Tier 3 (Mental Math), automatically hide the visual diagram first unless the question
     // requires reading a clock/coins/shape directly!
@@ -864,8 +949,10 @@ const App = {
     const prog = this.getProgress(node.id);
     const stepTagEl = document.getElementById("merlin-step-tag");
     if (stepTagEl) {
-      const tierNames = { 1: "Tier 1 · Concrete/Pictorial", 2: "Tier 2 · Guided Mastery", 3: "Tier 3 · Mental Math Crown" };
-      stepTagEl.textContent = `${tierNames[prog.tier] || "Play Mode"} · Strike ${Math.min(5, prog.shields + 1)} of 5`;
+      const strikeLabel = prog.tier === 3 && !this.visualHintVisible
+        ? "Mental Math Challenge"
+        : node.isBoss ? "Boss Battle" : "Quest Challenge";
+      stepTagEl.textContent = `${strikeLabel} · Strike ${Math.min(5, prog.shields + 1)} of 5`;
     }
 
     document.getElementById("merlin-prompt-text").textContent = prob.story;
@@ -1033,6 +1120,10 @@ const App = {
       ? "Glorious victory, young Squire! The Boss has fallen before your wisdom and courage!"
       : "Well done, young Squire! You have won the mission. Let us march onward along the King's Highway!";
     document.getElementById("victory-message").textContent = `“${msg}”`;
+    const stayBtn = document.getElementById("btn-stay-practice");
+    if (stayBtn) {
+      stayBtn.textContent = starsCount < 3 ? `Play Again (Win Star ${starsCount + 1}!)` : "Play Again";
+    }
     this.playVoiceClip(node.isBoss ? "victory_boss" : "victory_standard");
     this.openModal("victory-modal");
   },
@@ -1171,7 +1262,7 @@ const App = {
             </div>
           </div>
           <div style="display:flex;align-items:center;gap:8px;">
-            <span class="seal-pill" style="white-space:nowrap;">Streak: <strong>${this.tabletopQuizStreak}</strong></span>
+            <span class="tt-streak-badge" style="white-space:nowrap;">Streak: <strong>${this.tabletopQuizStreak}</strong></span>
             <button class="btn-vellum btn-sm" id="tt-btn-switch-whiteboard">← Back to Whiteboard</button>
           </div>
         </div>
@@ -1333,7 +1424,7 @@ const App = {
         const total = 10 + left;
         eqHTML = `${st.tfA} + ${b} = 10 + ${left} = ${st.hideAnswer ? '<span class="eq-mystery-box">?</span>' : total}`;
         sayScript = `“${st.tfA} needs ${need} more to fill the top Ten-Frame! Split ${b} into ${need} and ${left}: 10 + ${left} = ${total}!”`;
-        visualSpec = { type: "make-ten", a: st.tfA, b, needForTen: need, leftover: left, total };
+        visualSpec = { type: "make-ten", a: st.tfA, b, needForTen: need, leftover: left, total, revealSplit: !st.hideAnswer };
         controlsHTML = `
           <div class="tt-submode-group">
             <button class="tt-submode-btn active" data-sub="maketen">Make-10 Addition</button>
@@ -1361,7 +1452,7 @@ const App = {
         const ans = leftInTen + ones;
         eqHTML = `${st.subTeen} − ${sub} = ${leftInTen} + ${ones} = ${st.hideAnswer ? '<span class="eq-mystery-box">?</span>' : ans}`;
         sayScript = `“We can't take ${sub} from ${ones}, so take ${sub} right out of the full 10-frame! ${leftInTen} left in the 10-frame plus ${ones} ones = ${ans}!”`;
-        visualSpec = { type: "subtract-from-ten", teen: st.subTeen, ones, sub, leftInTen, answer: ans };
+        visualSpec = { type: "subtract-from-ten", teen: st.subTeen, ones, sub, leftInTen, answer: ans, revealSplit: !st.hideAnswer };
         controlsHTML = `
           <div class="tt-submode-group">
             <button class="tt-submode-btn" data-sub="maketen">Make-10 Addition</button>
@@ -1386,7 +1477,7 @@ const App = {
         const teen = 10 + st.teenOnes;
         eqHTML = `10 + ${st.teenOnes} = ${st.hideAnswer ? '<span class="eq-mystery-box">?</span>' : teen}`;
         sayScript = `“Every teen number is 1 full Ten-Frame (10) and some loose Ones! 10 and ${st.teenOnes} make ${teen}.”`;
-        visualSpec = { type: "double-ten-frame", topCount: 10, bottomCount: st.teenOnes, itemType: "lantern" };
+        visualSpec = { type: "double-ten-frame", first: 10, second: st.teenOnes, revealTotal: !st.hideAnswer };
         controlsHTML = `
           <div class="tt-submode-group">
             <button class="tt-submode-btn" data-sub="maketen">Make-10 Addition</button>
@@ -1415,7 +1506,7 @@ const App = {
         };
         const info = shapeMap[st.shapeKey] || shapeMap.hexagon;
         eqHTML = `${info.label}: ${st.hideAnswer ? '<span class="eq-mystery-box">?</span>' : info.corners} corners &amp; straight sides`;
-        sayScript = `“Touch each red corner dot with your finger! A ${info.label} has ${info.corners} corners and ${info.corners} straight sides.”`;
+        sayScript = `“Touch each gold corner dot with your finger! A ${info.label} has ${info.corners} corners and ${info.corners} straight sides.”`;
         visualSpec = { type: "shapes", mode: "single", shape: st.shapeKey };
         controlsHTML = `
           <div class="tt-submode-group">
@@ -1438,11 +1529,11 @@ const App = {
         eqHTML = `${ordWords[target]} from the ${st.ordDir.toUpperCase()} = Position #${posFromLeft + 1} from Left`;
         sayScript = `“Start at the ${st.ordDir.toUpperCase()} arrow and count 1st, 2nd, 3rd... up to the ${ordWords[target]} shield!”`;
         visualSpec = {
-          type: "ordinal-line",
+          type: "ordinals",
           total: st.ordTotal,
-          highlightIndex: posFromLeft,
-          direction: st.ordDir,
-          ordinalWord: ordWords[target]
+          targetPos: target,
+          fromDirection: st.ordDir,
+          revealOrdinals: !st.hideAnswer
         };
         controlsHTML = `
           <div class="tt-submode-group">
@@ -1464,7 +1555,7 @@ const App = {
         const diff = Math.abs(st.lenA - st.lenB);
         eqHTML = `${st.lenA} blocks − ${st.lenB} blocks = ${st.hideAnswer ? '<span class="eq-mystery-box">?</span>' : diff} blocks longer`;
         sayScript = `“Both swords start at the same baseline with zero gaps. Sword A (${st.lenA}) is ${diff} blocks longer than Sword B (${st.lenB})!”`;
-        visualSpec = { type: "length-units", lengthA: st.lenA, lengthB: st.lenB };
+        visualSpec = { type: "length-units", lengthA: st.lenA, lengthB: st.lenB, revealNumbers: !st.hideAnswer };
         controlsHTML = `
           <div class="tt-submode-group">
             <button class="tt-submode-btn" data-sub="shapes">Shapes &amp; Corners</button>
@@ -1562,8 +1653,8 @@ const App = {
       if (st.pvSub === "tensones") {
         const total = st.pvTens * 10 + st.pvOnes;
         eqHTML = `${st.pvTens} Tens (${st.pvTens * 10}) + ${st.pvOnes} Ones = ${st.hideAnswer ? '<span class="eq-mystery-box">?</span>' : total}`;
-        sayScript = `“Count the golden Tens towers by 10s (${st.pvTens * 10}), then count on the ${st.pvOnes} loose Ones to get ${total}!”`;
-        visualSpec = { type: "place-value", tens: st.pvTens, ones: st.pvOnes, addTens: 0, addOnes: 0 };
+        sayScript = `“Count the blue Tens towers by 10s (${st.pvTens * 10}), then count on the ${st.pvOnes} loose Ones to get ${total}!”`;
+        visualSpec = { type: "place-value", tens: st.pvTens, ones: st.pvOnes, addTens: 0, addOnes: 0, revealChart: !st.hideAnswer };
         controlsHTML = `
           <div class="tt-submode-group">
             <button class="tt-submode-btn active" data-sub="tensones">Tens &amp; Ones</button>
@@ -1592,7 +1683,7 @@ const App = {
         const total = st.regA + b;
         eqHTML = `${st.regA} + ${b} = ${nextTen} + ${left} = ${st.hideAnswer ? '<span class="eq-mystery-box">?</span>' : total}`;
         sayScript = `“${st.regA} needs ${need} more to complete the next Ten (${nextTen})! Split ${b} into ${need} and ${left}: ${nextTen} + ${left} = ${total}!”`;
-        visualSpec = { type: "regrouping", a: st.regA, b, total };
+        visualSpec = { type: "regrouping", a: st.regA, b, total, revealSplit: !st.hideAnswer };
         controlsHTML = `
           <div class="tt-submode-group">
             <button class="tt-submode-btn" data-sub="tensones">Tens &amp; Ones</button>
@@ -1619,7 +1710,7 @@ const App = {
         const total = a + b;
         eqHTML = `${a} + ${b} = (${st.add2TensA * 10}+${st.add2TensB * 10}) + (${st.add2OnesA}+${st.add2OnesB}) = ${st.hideAnswer ? '<span class="eq-mystery-box">?</span>' : total}`;
         sayScript = `“To add ${a} + ${b}, combine the Tens with Tens (${st.add2TensA * 10} + ${st.add2TensB * 10} = ${(st.add2TensA + st.add2TensB) * 10}) and Ones with Ones (${st.add2OnesA} + ${st.add2OnesB} = ${st.add2OnesA + st.add2OnesB})!”`;
-        visualSpec = { type: "place-value", tens: st.add2TensA, ones: st.add2OnesA, addTens: st.add2TensB, addOnes: st.add2OnesB };
+        visualSpec = { type: "place-value", tens: st.add2TensA, ones: st.add2OnesA, addTens: st.add2TensB, addOnes: st.add2OnesB, revealChart: !st.hideAnswer };
         controlsHTML = `
           <div class="tt-submode-group">
             <button class="tt-submode-btn" data-sub="tensones">Tens &amp; Ones</button>
@@ -1645,7 +1736,7 @@ const App = {
         const chain = Array.from({ length: st.grpCount }, () => st.grpPer).join(" + ");
         eqHTML = `${st.grpCount} equal groups of ${st.grpPer}: &nbsp; ${chain} = ${st.hideAnswer ? '<span class="eq-mystery-box">?</span>' : total}`;
         sayScript = `“There are ${st.grpCount} trays with ${st.grpPer} shields on each tray. Count by equal groups (${chain} = ${total})—or share ${total} equally among ${st.grpCount} trays!”`;
-        visualSpec = { type: "equal-groups", groups: st.grpCount, perGroup: st.grpPer, total, itemType: "shield" };
+        visualSpec = { type: "equal-groups", groups: st.grpCount, perGroup: st.grpPer, total, itemType: "shield", revealSkipCount: !st.hideAnswer };
         controlsHTML = `
           <div class="tt-submode-group">
             <button class="tt-submode-btn active" data-sub="groups">Equal Groups &amp; Fair Sharing</button>
@@ -1785,10 +1876,27 @@ const App = {
         ${controlsHTML}
       </div>
       <div id="tt-visual-mount" style="width:100%;display:flex;justify-content:center;align-items:center;min-height:0;"></div>
-      <div class="equation-banner">${eqHTML}</div>
+      <div class="equation-banner${(this.tabletopTool === "bonds10" && st.b10Sub === "bond") || controlsHTML.includes("tt-toggle-hide") ? " eq-clickable" : ""}" id="tt-explore-eq">${eqHTML}</div>
     `;
 
     Visuals.renderMathVisual(document.getElementById("tt-visual-mount"), visualSpec);
+
+    const canToggleEq = (this.tabletopTool === "bonds10" && st.b10Sub === "bond") || controlsHTML.includes("tt-toggle-hide");
+    const exploreEq = document.getElementById("tt-explore-eq");
+    if (exploreEq && canToggleEq) {
+      exploreEq.setAttribute("title", "Tap to hide or reveal the missing number");
+      exploreEq.onclick = () => {
+        if (this.tabletopTool === "bonds10" && st.b10Sub === "bond") {
+          st.nbMissing = st.nbMissing === "none" ? "partB" : st.nbMissing === "partB" ? "whole" : "none";
+          this.playTone([659.25], "sine", 0.06, 0.02);
+          this.renderTabletop();
+        } else {
+          st.hideAnswer = !st.hideAnswer;
+          this.playTone([st.hideAnswer ? 440 : 659.25], "sine", 0.06, 0.02);
+          this.renderTabletop();
+        }
+      };
+    }
 
     // Wire common buttons
     const quizLaunchBtn = document.getElementById("tt-launch-quiz");
@@ -1831,7 +1939,14 @@ const App = {
     // Wire Station 1 controls
     const bind = (id, fn) => {
       const el = document.getElementById(id);
-      if (el) el.onclick = () => { fn(); this.renderTabletop(); };
+      if (el) {
+        el.onclick = () => {
+          if (id.endsWith("-inc")) this.playTone([587.33], "sine", 0.06, 0.02);
+          else if (id.endsWith("-dec")) this.playTone([440], "sine", 0.06, 0.02);
+          fn();
+          this.renderTabletop();
+        };
+      }
     };
     bind("nb-a-dec", () => { st.nbPartA = Math.max(1, st.nbPartA - 1); });
     bind("nb-a-inc", () => { st.nbPartA = Math.min(9, st.nbPartA + 1); if (st.nbPartA + st.nbPartB > 10) st.nbPartB = 10 - st.nbPartA; });
@@ -1939,7 +2054,7 @@ const App = {
           <div class="p-card-desc">${node.subtitle} (${prog.shields}/5 Shields · ${starsCount}/3 Stars)</div>
         </div>
         <div class="p-card-actions">
-          <button class="btn-vellum btn-sm btn-jump-node" data-id="${node.id}">Play Level -></button>
+          <button class="btn-vellum btn-sm btn-jump-node" data-id="${node.id}">Play Level →</button>
           <button class="btn-vellum btn-sm btn-toggle-seal" data-id="${node.id}">
             ${prog.mastered ? "Clear Seal" : "Grant Seal"}
           </button>
@@ -2009,6 +2124,31 @@ const App = {
     setTimeout(() => toast.remove(), 3200);
   },
 
+  bindTwoTapConfirm(btnEl, labelEl, defaultLabel, armedLabel, onConfirm) {
+    if (!btnEl) return;
+    let armTimer = null;
+    const disarm = () => {
+      btnEl.dataset.armed = "0";
+      btnEl.classList.remove("confirm-armed");
+      if (labelEl) labelEl.textContent = defaultLabel;
+      if (armTimer) {
+        clearTimeout(armTimer);
+        armTimer = null;
+      }
+    };
+    btnEl.addEventListener("click", () => {
+      if (btnEl.dataset.armed === "1") {
+        disarm();
+        onConfirm();
+        return;
+      }
+      btnEl.dataset.armed = "1";
+      btnEl.classList.add("confirm-armed");
+      if (labelEl) labelEl.textContent = armedLabel;
+      armTimer = setTimeout(disarm, 3500);
+    });
+  },
+
   // --------------------------------------------------------------------------
   // EVENT LISTENERS
   // --------------------------------------------------------------------------
@@ -2027,27 +2167,19 @@ const App = {
       this.updateHeaderStatus();
     });
 
-    document.getElementById("btn-quick-reset").addEventListener("click", () => {
-      this.resetAllToBrandNew();
-    });
-
     const resetLevelBtn = document.getElementById("btn-reset-level");
-    if (resetLevelBtn) {
-      resetLevelBtn.addEventListener("click", () => {
-        this.resetCurrentLevel();
-      });
-    }
+    const resetLevelLabel = document.getElementById("reset-level-label");
+    this.bindTwoTapConfirm(
+      resetLevelBtn,
+      resetLevelLabel,
+      "Restart This Mission",
+      "Tap Again to Restart Mission",
+      () => this.resetCurrentLevel()
+    );
 
     document.getElementById("btn-enter-node").addEventListener("click", () => {
       this.zoomIntoStronghold(this.state.selectedNodeId);
     });
-
-    const backToMapBtn = document.getElementById("btn-back-to-map");
-    if (backToMapBtn) {
-      backToMapBtn.addEventListener("click", () => {
-        this.switchView("map");
-      });
-    }
 
     // Mode Switch (Lesson vs Play)
     document.getElementById("tab-learn").addEventListener("click", () => this.setStudioMode("learn"));
@@ -2094,6 +2226,11 @@ const App = {
     });
 
     // Quiet Parent Corner Controls in Play Mode
+    const replayBtn = document.getElementById("btn-replay-voice");
+    if (replayBtn) {
+      replayBtn.addEventListener("click", () => this.replayCurrentVoice());
+    }
+
     document.getElementById("btn-toggle-visual-hint").addEventListener("click", () => {
       this.visualHintVisible = !this.visualHintVisible;
       this.renderCurrentProblem();
@@ -2183,10 +2320,18 @@ const App = {
       this.renderMapAll();
     });
 
-    document.getElementById("btn-reset-progress").addEventListener("click", () => {
-      this.resetAllToBrandNew();
-      this.renderPlacementModal();
-    });
+    const fullResetBtn = document.getElementById("btn-reset-progress");
+    this.bindTwoTapConfirm(
+      fullResetBtn,
+      fullResetBtn,
+      "Full Reset (Mission 1)",
+      "Tap Again to Reset All Progress",
+      () => {
+        this.closeModal("placement-modal");
+        this.resetAllToBrandNew();
+        this.renderPlacementModal();
+      }
+    );
   }
 };
 
