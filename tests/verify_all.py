@@ -106,7 +106,7 @@ def run_jsc_audit():
 
     function verifyVisualMatchesProblem(nodeId, label, text, eqHTML, solvedHTML, answer, spec) {
       var container = { innerHTML: "" };
-      Visuals.renderSingaporeVisual(container, spec);
+      Visuals.renderMathVisual(container, spec);
       var html = container.innerHTML;
       assert(html && html.length > 20, "Node " + nodeId + " (" + label + "): empty visual HTML");
 
@@ -506,7 +506,7 @@ def main():
 
     all_errors = jsc_res["errors"] + audio_errors + ui_errors
 
-    print(f"[✓] Missions Audited:          {jsc_res['missionsTested']} / 23 (Chapters 1–19 + 4 Bosses)")
+    print(f"[✓] Missions Audited:          {jsc_res['missionsTested']} / 23 (Units 1–19 + 4 Bosses)")
     print(f"[✓] Monte Carlo Problems Run:  {jsc_res['problemsTested']} generated problems (Text <-> Visual & Math checked)")
     print(f"[✓] Adaptive & Mental Math:    Verified Tier 1 -> Tier 2 -> Tier 3 (Picture hidden on Tier 3, auto step-down on 2 misses)")
     print(f"[✓] Static Voice Clips (.wav): {len(set(jsc_res['voiceKeys']))} / 57 WAV headers & durations verified")

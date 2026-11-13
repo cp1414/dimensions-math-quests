@@ -26,7 +26,7 @@ const App = {
   tabletopQuizStreak: 0,
   tabletopQuizProblem: null,
   tabletopState: {
-    // Station 1: Bonds & Frames to 10 (Ch. 1–4)
+    // Station 1: Bonds & Frames to 10 (Units 1–4)
     b10Sub: "bond",          // "bond" | "path" | "crossout"
     nbPartA: 6,
     nbPartB: 4,
@@ -35,14 +35,14 @@ const App = {
     pathJump: 3,
     subWhole: 9,
     subTake: 4,
-    // Station 2: Make-10 & Subtract-from-10 Bridge (Ch. 5–7)
+    // Station 2: Make-10 & Subtract-from-10 Bridge (Units 5–7)
     m10Sub: "maketen",       // "maketen" | "subten" | "teen"
     tfA: 8,
     tfB: 5,
     subTeen: 14,
     subNineEight: 8,
     teenOnes: 6,
-    // Station 3: Shapes, Ordinals & Length (Ch. 8–10)
+    // Station 3: Shapes, Ordinals & Length (Units 8–10)
     shSub: "shapes",         // "shapes" | "ordinals" | "length"
     shapeKey: "hexagon",
     ordTotal: 6,
@@ -50,14 +50,14 @@ const App = {
     ordTarget: 3,
     lenA: 8,
     lenB: 5,
-    // Station 4: Bar Models & Comparison (Ch. 11, 13, 17)
+    // Station 4: Bar Models & Comparison (Units 11, 13, 17)
     bmSub: "part-whole",     // "part-whole" | "comparison" | "rows"
     bmA: 18,
     bmB: 12,
     bmMissing: "none",       // "none" | "whole" | "partB"
     rowTop: 9,
     rowBot: 5,
-    // Station 5: Tens, Ones & Regrouping to 100 (Ch. 12, 13, 16, 17)
+    // Station 5: Tens, Ones & Regrouping to 100 (Units 12, 13, 16, 17)
     pvSub: "tensones",       // "tensones" | "regroup" | "add2digit"
     pvTens: 3,
     pvOnes: 6,
@@ -67,14 +67,14 @@ const App = {
     add2OnesA: 2,
     add2TensB: 2,
     add2OnesB: 5,
-    // Station 6: Equal Groups, Sharing & Fractions (Ch. 14–15)
+    // Station 6: Equal Groups, Sharing & Fractions (Units 14–15)
     gfSub: "groups",         // "groups" | "fractions"
     grpCount: 3,
     grpPer: 4,
     fracParts: 4,
     fracShaded: 3,
     fracShape: "circle",
-    // Station 7: Watchtower Clock & Royal Coin Purse (Ch. 18–19)
+    // Station 7: Watchtower Clock & Royal Coin Purse (Units 18–19)
     ccSub: "clock",          // "clock" | "coins"
     clkHour: 3,
     clkMin: 30,
@@ -615,7 +615,7 @@ const App = {
     };
     const badgeBg = prog.tier === 3 ? "#982B2B" : prog.tier === 2 ? "#B85D19" : "#24578D";
     const starsCount = Math.min(3, prog.stars || (prog.mastered ? 1 : 0));
-    let starsHTML = `<div style="display:inline-flex;align-items:center;gap:2px;background:#FFFDF7;border:1.5px solid #C59B27;border-radius:999px;padding:2px 8px;" title="Chapter Mastery Stars (${starsCount}/3 Quests Completed)">`;
+    let starsHTML = `<div style="display:inline-flex;align-items:center;gap:2px;background:#FFFDF7;border:1.5px solid #C59B27;border-radius:999px;padding:2px 8px;" title="Unit Mastery Stars (${starsCount}/3 Quests Completed)">`;
     for (let s = 1; s <= 3; s++) {
       starsHTML += `<span style="display:inline-flex;width:16px;height:16px;">${Visuals.getIconSVG(s <= starsCount ? "star" : "starEmpty", 16)}</span>`;
     }
@@ -681,7 +681,7 @@ const App = {
 
     document.getElementById("merlin-prompt-text").textContent = step.narrative;
     document.getElementById("main-equation-banner").innerHTML = step.equationHTML;
-    Visuals.renderSingaporeVisual(document.getElementById("main-visual-stage"), step.visualSpec);
+    Visuals.renderMathVisual(document.getElementById("main-visual-stage"), step.visualSpec);
 
     // Interactive Check-for-Understanding inside Lesson Mode
     const checkBar = document.getElementById("learn-check-bar");
@@ -874,7 +874,7 @@ const App = {
     const stage = document.getElementById("main-visual-stage");
     const toggleText = document.getElementById("visual-toggle-text");
     if (this.visualHintVisible) {
-      Visuals.renderSingaporeVisual(stage, prob.visualSpec);
+      Visuals.renderMathVisual(stage, prob.visualSpec);
       toggleText.textContent = "Hide Picture";
     } else {
       stage.innerHTML = `
@@ -993,7 +993,7 @@ const App = {
     }
 
     this.visualHintVisible = true;
-    Visuals.renderSingaporeVisual(document.getElementById("main-visual-stage"), prob.visualSpec);
+    Visuals.renderMathVisual(document.getElementById("main-visual-stage"), prob.visualSpec);
     document.getElementById("visual-toggle-text").textContent = "Hide Picture";
 
     const banner = document.getElementById("merlin-banner");
@@ -1038,7 +1038,7 @@ const App = {
   },
 
   // --------------------------------------------------------------------------
-  // VIEW 3: INTERACTIVE MATH BLOCKS WORKSHOP & PRACTICE MAT (All 19 Chapters)
+  // VIEW 3: INTERACTIVE MATH BLOCKS WORKSHOP & PRACTICE MAT (All 19 Units)
   // --------------------------------------------------------------------------
   openNodeInTabletop(nodeId) {
     const st = this.tabletopState;
@@ -1084,43 +1084,43 @@ const App = {
   getStationMeta(tool) {
     const meta = {
       bonds10: {
-        chapterTag: "Dimensions 1A · Chapters 1–4",
+        chapterTag: "Act I · Units 1–4",
         purpose: "5-Group Subitizing, Number Bonds & Subtraction Within 10",
         nodeIds: [1, 2, 3, 4],
         jumpNodeId: 2
       },
       maketen: {
-        chapterTag: "Dimensions 1A · Chapters 5–7",
+        chapterTag: "Act II · Units 5–7",
         purpose: "Teen Numbers, Make-10 Bridge & Subtract-from-10",
         nodeIds: [6, 7, 8],
         jumpNodeId: 7
       },
       shapeslen: {
-        chapterTag: "Dimensions 1A Ch. 8–9 & 1B Ch. 10",
+        chapterTag: "Acts II–III · Units 8–10",
         purpose: "Geometry (Sides/Corners), Ordinal Ranks & Block Measurement",
         nodeIds: [9, 10, 12],
         jumpNodeId: 9
       },
       barmodel: {
-        chapterTag: "Dimensions 1B · Chapters 11, 13 & 17",
+        chapterTag: "Acts III–IV · Units 11, 13 & 17",
         purpose: "Part-Whole Bar Models & One-to-One Comparison ('How Many More/Fewer?')",
         nodeIds: [13, 15, 20],
         jumpNodeId: 13
       },
       placevalue: {
-        chapterTag: "Dimensions 1B · Chapters 12, 13, 16 & 17",
+        chapterTag: "Acts III–IV · Units 12, 13, 16 & 17",
         purpose: "Tens Towers, Loose Ones & Bridging to the Next Ten to 100",
         nodeIds: [14, 15, 19, 20],
         jumpNodeId: 15
       },
       groupsfrac: {
-        chapterTag: "Dimensions 1B · Chapters 14–15",
+        chapterTag: "Act III · Units 14–15",
         purpose: "Repeated Addition Equal Groups, Fair Sharing & Halves/Fourths",
         nodeIds: [16, 17],
         jumpNodeId: 16
       },
       clockcoins: {
-        chapterTag: "Dimensions 1B · Chapters 18–19",
+        chapterTag: "Act IV · Units 18–19",
         purpose: "Watchtower Analog/Digital Clock (:00 & :30) & Royal Coin Purse (1¢–25¢)",
         nodeIds: [21, 22],
         jumpNodeId: 22
@@ -1190,7 +1190,7 @@ const App = {
         </div>
       `;
 
-      Visuals.renderSingaporeVisual(document.getElementById("tt-visual-mount"), prob.visualSpec);
+      Visuals.renderMathVisual(document.getElementById("tt-visual-mount"), prob.visualSpec);
 
       const choicesEl = document.getElementById("tt-quiz-choices");
       prob.choices.forEach(val => {
@@ -1776,8 +1776,8 @@ const App = {
           <button class="btn-royal-primary btn-sm" id="tt-launch-quiz" style="padding:8px 14px;font-size:13px;">
             Practice &amp; Quiz This →
           </button>
-          <button class="btn-vellum btn-sm" id="tt-jump-mission" title="Jump straight to this Chapter's Quest">
-            Play Chapter Quest
+          <button class="btn-vellum btn-sm" id="tt-jump-mission" title="Jump straight to this Unit's Quest">
+            Play Unit Quest
           </button>
         </div>
       </div>
@@ -1788,7 +1788,7 @@ const App = {
       <div class="equation-banner">${eqHTML}</div>
     `;
 
-    Visuals.renderSingaporeVisual(document.getElementById("tt-visual-mount"), visualSpec);
+    Visuals.renderMathVisual(document.getElementById("tt-visual-mount"), visualSpec);
 
     // Wire common buttons
     const quizLaunchBtn = document.getElementById("tt-launch-quiz");

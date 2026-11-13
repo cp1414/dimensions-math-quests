@@ -1,4 +1,4 @@
-const CACHE_NAME = "young-knights-quest-v3";
+const CACHE_NAME = "young-knights-quest-v4";
 const CORE_ASSETS = [
   "./",
   "./index.html",

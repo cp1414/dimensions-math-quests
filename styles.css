@@ -778,7 +778,7 @@ html, body {
   position: relative;
 }
 
-.singapore-visual-stage {
+.visual-math-stage {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1207,7 +1207,7 @@ html, body {
   font-size: 20px;
 }
 
-.studio-screen.parent-sidebar-open .singapore-visual-stage {
+.studio-screen.parent-sidebar-open .visual-math-stage {
   transform: scale(0.9);
 }
 

@@ -78,7 +78,7 @@ LINES = {
     "mental_win_0": "By the King's crown—you solved that completely in your head! Masterful!",
     "mental_win_1": "Pure mental math! You didn't even need the picture for that strike!",
 
-    # Topic-Specific Singapore Math Coaching Lines
+    # Topic-Specific Visual & Mental Math Coaching Lines
     "coach_bond": "Look at the Ten-Frame and Number Bond: a full top row is five! Put the parts together!",
     "coach_path": "Hold the bigger number in your head, then hop forward along the number path!",
     "coach_crossout": "Start with all the items in the frame, cross out the ones that left, and count what remains!",

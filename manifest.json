@@ -1,7 +1,7 @@
 {
-  "name": "The Young Knight's Quest — Singapore Math Adventure",
+  "name": "The Young Knight's Quest — Grade 1 Visual & Mental Math Adventure",
   "short_name": "Knight's Quest",
-  "description": "Complete Grade 1A & 1B Singapore Dimensions Math interactive homeschool and classroom adventure.",
+  "description": "Complete Grade 1 Visual & Mental Math interactive homeschool and classroom adventure.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

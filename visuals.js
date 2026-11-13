@@ -1,5 +1,5 @@
 // ============================================================================
-// THE YOUNG KNIGHT'S QUEST — ILLUMINATED STORYBOOK ARTWORK & SINGAPORE DIAGRAMS
+// THE YOUNG KNIGHT'S QUEST — ILLUMINATED STORYBOOK ARTWORK & VISUAL MATH DIAGRAMS
 // 100% Hand-Crafted Multi-Layered Vector Artwork — Zero Emojis
 // ============================================================================
 
@@ -638,9 +638,9 @@ const Visuals = {
   },
 
   // --------------------------------------------------------------------------
-  // 7. MASTER ROUTER FOR LARGE, CLEAN SINGAPORE MATH DIAGRAMS
+  // 7. MASTER ROUTER FOR LARGE, CLEAN VISUAL MATH DIAGRAMS
   // --------------------------------------------------------------------------
-  renderSingaporeVisual(container, spec) {
+  renderMathVisual(container, spec) {
     if (!container || !spec) return;
     switch (spec.type) {
       case "number-bond-concrete":
@@ -1104,7 +1104,7 @@ const Visuals = {
   },
 
   // --------------------------------------------------------------------------
-  // DIAGRAM I: SINGAPORE BAR MODELS
+  // DIAGRAM I: PART-WHOLE & COMPARISON BAR MODELS
   // --------------------------------------------------------------------------
   renderBarModel(spec) {
     if (spec.modelType === "part-whole") {
@@ -1159,7 +1159,7 @@ const Visuals = {
   },
 
   // --------------------------------------------------------------------------
-  // DIAGRAM J: TWO-DIGIT REGROUPING ("MAKE THE NEXT TEN" — DIMENSIONS 1B CH. 13)
+  // DIAGRAM J: TWO-DIGIT REGROUPING ("MAKE THE NEXT TEN" — UNIT 13)
   // --------------------------------------------------------------------------
   renderRegrouping(spec) {
     const { a, b, revealSplit = false } = spec;
@@ -1221,7 +1221,7 @@ const Visuals = {
           </div>
         </div>
 
-        <!-- Right: Authentic Singapore Number-Bond Split (38 + 5 -> 5 splits into 2 and 3; 38 + 2 = 40) -->
+        <!-- Right: Number-Bond Split (38 + 5 -> 5 splits into 2 and 3; 38 + 2 = 40) -->
         <svg width="255" height="185" viewBox="0 0 255 185">
           <!-- Dashed Make-Next-Ten Loop around a and needForTen -->
           <rect x="14" y="12" width="134" height="114" rx="16" fill="#EBF4EE" stroke="#2B5B3F" stroke-width="2.5" stroke-dasharray="6,4"/>
@@ -1283,7 +1283,7 @@ const Visuals = {
   },
 
   // --------------------------------------------------------------------------
-  // DIAGRAM L: SHAPES, SIDES, CORNERS & PATTERNS (Dimensions 1A Ch. 8)
+  // DIAGRAM L: SHAPES, SIDES, CORNERS & PATTERNS (Unit 8)
   // --------------------------------------------------------------------------
   renderShapes(spec) {
     const { mode = "single", shape = "triangle", pattern = [], showCornerNumbers = false } = spec;
@@ -1352,7 +1352,7 @@ const Visuals = {
   },
 
   // --------------------------------------------------------------------------
-  // DIAGRAM M: ORDINAL NUMBERS 1st TO 10th (Dimensions 1A Ch. 9)
+  // DIAGRAM M: ORDINAL NUMBERS 1st TO 10th (Unit 9)
   // --------------------------------------------------------------------------
   renderOrdinals(spec) {
     const { total = 8, targetPos = 4, fromDirection = "left", revealOrdinals = false } = spec;
@@ -1394,7 +1394,7 @@ const Visuals = {
   },
 
   // --------------------------------------------------------------------------
-  // DIAGRAM N: LENGTH MEASUREMENT WITH BLOCK UNITS (Dimensions 1B Ch. 10)
+  // DIAGRAM N: LENGTH MEASUREMENT WITH BLOCK UNITS (Unit 10)
   // --------------------------------------------------------------------------
   renderLengthUnits(spec) {
     const { lengthA = 6, lengthB = null, offsetA = 0, labelA = "Royal Broadsword", revealNumbers = false } = spec;
@@ -1443,7 +1443,7 @@ const Visuals = {
   },
 
   // --------------------------------------------------------------------------
-  // DIAGRAM O: FRACTIONS — HALVES & FOURTHS/QUARTERS (Dimensions 1B Ch. 15)
+  // DIAGRAM O: FRACTIONS — HALVES & FOURTHS/QUARTERS (Unit 15)
   // --------------------------------------------------------------------------
   renderFractions(spec) {
     const { parts = 4, shaded = 1, shape = "circle" } = spec;
@@ -1495,7 +1495,7 @@ const Visuals = {
   },
 
   // --------------------------------------------------------------------------
-  // DIAGRAM P: TELLING TIME — O'CLOCK & HALF-PAST (Dimensions 1B Ch. 18)
+  // DIAGRAM P: TELLING TIME — O'CLOCK & HALF-PAST (Unit 18)
   // --------------------------------------------------------------------------
   renderClock(spec) {
     const { hour = 3, minutes = 0 } = spec;
@@ -1536,7 +1536,7 @@ const Visuals = {
   },
 
   // --------------------------------------------------------------------------
-  // DIAGRAM Q: MONEY — PENNIES, NICKELS, DIMES, QUARTERS (Dimensions 1B Ch. 19)
+  // DIAGRAM Q: MONEY — PENNIES, NICKELS, DIMES, QUARTERS (Unit 19)
   // --------------------------------------------------------------------------
   renderCoins(spec) {
     const { coins = [10, 10, 5, 1, 1] } = spec;
