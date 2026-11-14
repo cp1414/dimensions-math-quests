@@ -142,18 +142,19 @@ const CPAPrimitives = {
     return `<div class="cpa-ten-frame" style="display:inline-grid;grid-template-columns:repeat(5,58px);gap:5px;padding:10px;background:#E2EFE0;border:2.5px solid #2A4B30;border-radius:14px;">${cells}</div>`;
   },
 
-  renderDoubleTenFrameHTML(count, itemType = "acorn") {
+  renderDoubleTenFrameHTML(count, itemType = "acorn", opts = {}) {
     const safeCount = Math.max(0, Math.min(20, count));
     const first = Math.min(10, safeCount);
     const second = Math.max(0, safeCount - 10);
+    const showLabels = opts.showLabels !== false;
     return `<div style="display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:center;">
       <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
         ${this.renderTenFrameHTML(first, itemType, { partA: first })}
-        <span style="font-size:13px;font-weight:700;color:#2A4B30;">10</span>
+        ${showLabels ? `<span style="font-size:13px;font-weight:700;color:#2A4B30;">10</span>` : ""}
       </div>
       <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
         ${this.renderTenFrameHTML(second, itemType, { partA: 0 })}
-        <span style="font-size:13px;font-weight:700;color:#7A4820;">${second} more</span>
+        ${showLabels ? `<span style="font-size:13px;font-weight:700;color:#7A4820;">${second} more</span>` : ""}
       </div>
     </div>`;
   },
@@ -201,10 +202,11 @@ const CPAPrimitives = {
   // --------------------------------------------------------------------------
   // 4. STEPPING-STONE NUMBER PATH (1–10)
   // --------------------------------------------------------------------------
-  renderNumberPathSVG(start, jump, direction = "forward") {
+  renderNumberPathSVG(start, jump, direction = "forward", opts = {}) {
     const cells = 10;
     const stepW = 54;
     const totalW = cells * stepW + 20;
+    const revealEnd = opts.revealEnd === true;
     let boxes = "";
     let arcs = "";
     const endVal = direction === "forward" ? start + jump : start - jump;
@@ -212,25 +214,35 @@ const CPAPrimitives = {
     for (let i = 1; i <= cells; i++) {
       const x = 10 + (i - 1) * stepW;
       const isStart = i === start;
-      const isEnd = i === endVal;
+      const isEnd = revealEnd && i === endVal;
       const fill = isStart ? "#DCEFD9" : isEnd ? "#FCE8C3" : "#FFFDF8";
       const stroke = isStart ? "#2E6F40" : isEnd ? "#C0671B" : "#7D9173";
       boxes += `<rect x="${x}" y="58" width="48" height="48" rx="10" fill="${fill}" stroke="${stroke}" stroke-width="${isStart || isEnd ? 3 : 2}"/>
         <text x="${x + 24}" y="90" text-anchor="middle" font-size="21" font-weight="800" fill="#233322">${i}</text>`;
     }
 
-    const hops = Math.abs(jump);
-    for (let h = 0; h < hops; h++) {
-      const fromIdx = direction === "forward" ? start + h : start - h;
-      const toIdx = direction === "forward" ? fromIdx + 1 : fromIdx - 1;
-      if (fromIdx < 1 || toIdx < 1 || fromIdx > 10 || toIdx > 10) continue;
-      const x1 = 10 + (fromIdx - 1) * stepW + 24;
-      const x2 = 10 + (toIdx - 1) * stepW + 24;
-      const mid = (x1 + x2) / 2;
-      const arcColor = direction === "forward" ? "#2E6F40" : "#B03B2E";
-      const label = direction === "forward" ? "+1" : "-1";
-      arcs += `<path d="M ${x1} 54 Q ${mid} 22 ${x2} 54" fill="none" stroke="${arcColor}" stroke-width="2.8" stroke-linecap="round"/>
-        <text x="${mid}" y="22" text-anchor="middle" font-size="13" font-weight="800" fill="${arcColor}">${label}</text>`;
+    if (revealEnd) {
+      const hops = Math.abs(jump);
+      for (let h = 0; h < hops; h++) {
+        const fromIdx = direction === "forward" ? start + h : start - h;
+        const toIdx = direction === "forward" ? fromIdx + 1 : fromIdx - 1;
+        if (fromIdx < 1 || toIdx < 1 || fromIdx > 10 || toIdx > 10) continue;
+        const x1 = 10 + (fromIdx - 1) * stepW + 24;
+        const x2 = 10 + (toIdx - 1) * stepW + 24;
+        const mid = (x1 + x2) / 2;
+        const arcColor = direction === "forward" ? "#2E6F40" : "#B03B2E";
+        const label = direction === "forward" ? "+1" : "−1";
+        arcs += `<path d="M ${x1} 54 Q ${mid} 22 ${x2} 54" fill="none" stroke="${arcColor}" stroke-width="2.8" stroke-linecap="round"/>
+          <text x="${mid}" y="22" text-anchor="middle" font-size="13" font-weight="800" fill="${arcColor}">${label}</text>`;
+      }
+    } else {
+      const sx = 10 + (start - 1) * stepW + 24;
+      const badgeColor = direction === "forward" ? "#2E6F40" : "#B03B2E";
+      const arrowText = direction === "forward" ? `Hop +${jump} →` : `← Hop −${jump}`;
+      const clampedX = Math.max(62, Math.min(totalW - 62, sx));
+      arcs = `<rect x="${clampedX - 52}" y="12" width="104" height="24" rx="5" fill="#FFFDF8" stroke="${badgeColor}" stroke-width="2"/>
+        <text x="${clampedX}" y="29" text-anchor="middle" font-size="13" font-weight="800" fill="${badgeColor}">${arrowText}</text>
+        <line x1="${sx}" y1="36" x2="${sx}" y2="54" stroke="${badgeColor}" stroke-width="2.2" stroke-dasharray="3,2"/>`;
     }
 
     return `<svg width="100%" style="max-width:${totalW}px" viewBox="0 0 ${totalW} 118" role="img" aria-label="Number path 1 to 10">${arcs}${boxes}</svg>`;
@@ -242,7 +254,7 @@ const CPAPrimitives = {
   renderCompareMatchHTML(topCount, bottomCount, topItem = "acorn", bottomItem = "leaf", showLines = true) {
     const cols = Math.max(topCount, bottomCount, 1);
     const cellW = 46;
-    const width = cols * cellW + 24;
+    const width = cols * cellW;
     let topRow = "";
     let botRow = "";
     let lines = "";
@@ -256,7 +268,7 @@ const CPAPrimitives = {
     }
     if (showLines && pairs > 0) {
       for (let p = 0; p < pairs; p++) {
-        const cx = 12 + p * cellW + 21;
+        const cx = p * cellW + 21;
         lines += `<line x1="${cx}" y1="2" x2="${cx}" y2="26" stroke="#5A7554" stroke-width="2.2" stroke-dasharray="4,3"/>`;
       }
     }
@@ -391,24 +403,45 @@ const CPAPrimitives = {
   // --------------------------------------------------------------------------
   // 9. US COINS (1¢, 5¢, 10¢, 25¢)
   // --------------------------------------------------------------------------
-  renderCoinsHTML(coins) {
+  renderCoinsHTML(coins, opts = {}) {
+    const showLabels = opts.showLabels !== false;
     const specs = {
-      1: { label: "1¢", name: "Penny", r: 24, fill: "#D48155", rim: "#8A4624", text: "#421D0B" },
-      5: { label: "5¢", name: "Nickel", r: 28, fill: "#D6DCE0", rim: "#7A868E", text: "#2C353B" },
-      10: { label: "10¢", name: "Dime", r: 22, fill: "#E2E8EC", rim: "#7F8B94", text: "#2C353B" },
-      25: { label: "25¢", name: "Quarter", r: 32, fill: "#DCE2E6", rim: "#68747D", text: "#242D33" }
+      1:  { label: "1¢",  name: "Penny",   r: 24, fill: "#D48155", rim: "#8A4624", text: "#421D0B", dash: "" },
+      5:  { label: "5¢",  name: "Nickel",  r: 28, fill: "#CFD6DC", rim: "#6C7780", text: "#2C353B", dash: "" },
+      10: { label: "10¢", name: "Dime",    r: 19, fill: "#E5EBEF", rim: "#7C8891", text: "#2C353B", dash: "1.6,1.6" },
+      25: { label: "25¢", name: "Quarter", r: 34, fill: "#DCE2E6", rim: "#5A6670", text: "#242D33", dash: "2.4,1.8" }
+    };
+    const renderMotif = (val, c, color) => {
+      if (val === 1) {
+        return `<path d="M${c - 6} ${c - 7} L${c + 6} ${c - 7} L${c + 5} ${c + 4} Q${c} ${c + 9} ${c - 5} ${c + 4} Z" fill="${color}" opacity="0.32"/>
+          <line x1="${c}" y1="${c - 5}" x2="${c}" y2="${c + 5}" stroke="${color}" stroke-width="1.6" opacity="0.55"/>`;
+      }
+      if (val === 5) {
+        return `<path d="M${c - 9} ${c + 6} L${c + 9} ${c + 6} M${c - 7} ${c + 6} L${c - 7} ${c} L${c + 7} ${c} L${c + 7} ${c + 6}" fill="none" stroke="${color}" stroke-width="1.8" opacity="0.5"/>
+          <path d="M${c - 5} ${c} A5 5 0 0 1 ${c + 5} ${c} Z" fill="${color}" opacity="0.35"/>`;
+      }
+      if (val === 10) {
+        return `<line x1="${c}" y1="${c - 6}" x2="${c}" y2="${c + 7}" stroke="${color}" stroke-width="2" opacity="0.55"/>
+          <path d="M${c - 3} ${c - 6} Q${c} ${c - 10} ${c + 3} ${c - 6} Z" fill="${color}" opacity="0.45"/>`;
+      }
+      return `<path d="M${c - 13} ${c - 3} Q${c} ${c - 11} ${c + 13} ${c - 3} L${c + 8} ${c + 5} L${c} ${c + 9} L${c - 8} ${c + 5} Z" fill="${color}" opacity="0.28"/>
+        <path d="M${c - 10} ${c - 2} L${c} ${c + 6} L${c + 10} ${c - 2}" fill="none" stroke="${color}" stroke-width="1.8" opacity="0.55"/>`;
     };
     const items = coins.map((val) => {
       const s = specs[val] || specs[1];
       const box = s.r * 2 + 12;
       const c = box / 2;
-      return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
-        <svg width="${box}" height="${box}" viewBox="0 0 ${box} ${box}" role="img" aria-label="${s.name} ${s.label}">
+      const innerDash = s.dash ? ` stroke-dasharray="${s.dash}"` : "";
+      const centerHTML = showLabels
+        ? `<text x="${c}" y="${c + 5}" text-anchor="middle" font-size="14" font-weight="800" fill="${s.text}">${s.label}</text>`
+        : renderMotif(val, c, s.text);
+      return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;" data-coin="${s.label}">
+        <svg width="${box}" height="${box}" viewBox="0 0 ${box} ${box}" role="img" aria-label="${showLabels ? `${s.name} ${s.label}` : "Garden coin"}">
           <circle cx="${c}" cy="${c}" r="${s.r}" fill="${s.fill}" stroke="${s.rim}" stroke-width="3"/>
-          <circle cx="${c}" cy="${c}" r="${s.r - 4}" fill="none" stroke="${s.rim}" stroke-width="1" stroke-dasharray="2,2"/>
-          <text x="${c}" y="${c + 5}" text-anchor="middle" font-size="14" font-weight="800" fill="${s.text}">${s.label}</text>
+          <circle cx="${c}" cy="${c}" r="${s.r - 4.5}" fill="none" stroke="${s.rim}" stroke-width="1.2"${innerDash}/>
+          ${centerHTML}
         </svg>
-        <span style="font-size:11px;font-weight:700;color:#4B5946;">${s.name}</span>
+        ${showLabels ? `<span style="font-size:11px;font-weight:700;color:#4B5946;">${s.name}</span>` : ""}
       </div>`;
     }).join("");
     return `<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:center;">${items}</div>`;

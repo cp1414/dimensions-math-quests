@@ -307,15 +307,44 @@ def run_kindergarten_jsc_audit():
       } else if (spec.type === "number-bond") {
         assert(spec.partA + spec.partB === spec.whole, "K Node " + nodeId + ": number-bond math mismatch");
         if (spec.missing === "whole" && answer !== undefined) assert(answer === spec.whole, "K Node " + nodeId + ": bond answer != whole");
+        if (spec.missing === "partA" && answer !== undefined) assert(answer === spec.partA, "K Node " + nodeId + ": bond answer != partA");
         if (spec.missing === "partB" && answer !== undefined) assert(answer === spec.partB, "K Node " + nodeId + ": bond answer != partB");
       } else if (spec.type === "tens-ones-100") {
         var baskets = html.match(/class="k-ten-basket"/g) || [];
         assert(baskets.length === spec.tens, "K Node " + nodeId + ": ten-baskets (" + baskets.length + ") != " + spec.tens);
         var loose = html.match(/class="k-loose-one"/g) || [];
         assert(loose.length === spec.ones, "K Node " + nodeId + ": loose ones (" + loose.length + ") != " + spec.ones);
+      } else if (spec.type === "skip-count-5s") {
+        var fives = html.match(/class="k-five-bundle"/g) || [];
+        assert(fives.length === spec.groups, "K Node " + nodeId + ": skip-count-5s groups (" + fives.length + ") != " + spec.groups);
+      } else if (spec.type === "scattered-group") {
+        var sgItems = html.match(/<g transform="/g) || [];
+        assert(sgItems.length === spec.count, "K Node " + nodeId + ": scattered-group items (" + sgItems.length + ") != " + spec.count);
+      } else if (spec.type === "picture-graph") {
+        assert(spec.rows && spec.rows.length >= 2, "K Node " + nodeId + ": picture-graph needs rows");
+      } else if (spec.type === "sort-count-groups") {
+        assert(spec.items && spec.items.length >= 4, "K Node " + nodeId + ": sort-count-groups needs items");
+      } else if (spec.type === "left-right") {
+        assert(html.indexOf(">Pip<") !== -1, "K Node " + nodeId + ": left-right missing Pip reference");
+      } else if (spec.type === "height-compare") {
+        assert(spec.heightA > 0 && spec.heightB > 0 && spec.heightA !== spec.heightB, "K Node " + nodeId + ": invalid height-compare");
+      } else if (spec.type === "story-scene") {
+        assert(spec.countA >= 0 && spec.countB >= 0, "K Node " + nodeId + ": invalid story-scene");
+      } else if (spec.type === "number-compare") {
+        assert(spec.numA !== undefined || spec.mode === "order" || spec.mode === "word", "K Node " + nodeId + ": invalid number-compare");
+      } else if (spec.type === "daily-routine") {
+        assert(html.indexOf("SUNRISE") !== -1 || html.indexOf("MIDDAY") !== -1 || html.indexOf("MOON") !== -1, "K Node " + nodeId + ": invalid daily-routine");
+      } else if (spec.type === "count-path") {
+        if (!spec.revealEnd) {
+          assert(html.indexOf("#FCE8C3") === -1, "K Node " + nodeId + ": practice count-path must not highlight landing answer");
+        }
       } else if (spec.type === "coins") {
         for (var i = 0; i < spec.coins.length; i++) {
           assert(html.indexOf(spec.coins[i] + "¢") !== -1, "K Node " + nodeId + ": missing coin label " + spec.coins[i] + "¢");
+        }
+        if (spec.showLabels === false) {
+          assert(html.indexOf("Quarter") === -1 && html.indexOf("Dime") === -1 && html.indexOf("Nickel") === -1 && html.indexOf("Penny") === -1,
+            "K Node " + nodeId + ": hidden-label coin SVG leaked coin name");
         }
       } else if (spec.type === "clock-hour") {
         assert(spec.hour >= 1 && spec.hour <= 12, "K Node " + nodeId + ": invalid hour " + spec.hour);
@@ -323,12 +352,15 @@ def run_kindergarten_jsc_audit():
     }
 
     var totalTested = 0;
+    var node3Saw9thOr10th = false;
+    var node16QuizCoinTested = false;
     for (var i = 0; i < GARDEN_NODES.length; i++) {
       var node = GARDEN_NODES[i];
       assert(node.learnSteps && node.learnSteps.length >= 3, "K Node " + node.id + " needs >= 3 learnSteps");
       var checks = 0;
       for (var s = 0; s < node.learnSteps.length; s++) {
         var step = node.learnSteps[s];
+        assert(step.stageLabel.indexOf("&amp;") === -1, "K Node " + node.id + " stageLabel must not contain HTML entities (&amp;)");
         verifyKVisual(node.id, "learnStep[" + s + "]", step.visualSpec, undefined);
         if (step.checkQuestion) {
           checks++;
@@ -339,7 +371,7 @@ def run_kindergarten_jsc_audit():
       assert(checks >= 1, "K Node " + node.id + " must have >= 1 checkQuestion");
 
       for (var tier = 1; tier <= 3; tier++) {
-        for (var k = 0; k < 30; k++) {
+        for (var k = 0; k < 40; k++) {
           var prob = node.generateProblem(tier);
           totalTested++;
           verifyKVisual(node.id, "tier=" + tier, prob.visualSpec, prob.answer);
@@ -348,9 +380,22 @@ def run_kindergarten_jsc_audit():
           var uniq = {};
           for (var c = 0; c < prob.choices.length; c++) uniq[String(prob.choices[c])] = true;
           assert(Object.keys(uniq).length === 4, "K Node " + node.id + " tier " + tier + " duplicate choices: " + JSON.stringify(prob.choices));
+          if (node.id === 3 && tier === 3 && (prob.answer === "9th" || prob.answer === "10th")) node3Saw9thOr10th = true;
+          if (node.id === 8) assert(prob.equationHTML.indexOf("10 and ") === -1, "K Node 8 practice must not spoil 10 and X");
+          if (node.id === 13 && (tier === 1 || tier === 2)) {
+            assert(prob.equationHTML.indexOf("+") === -1 && prob.equationHTML.indexOf("−") === -1,
+              "K Node 13 Tier " + tier + " practice must not spoil + or - sign");
+          }
+          if (node.id === 14) assert(prob.equationHTML.indexOf(" + ") === -1, "K Node 14 practice must not spoil tens + ones formula");
+          if (node.id === 16) {
+            node16QuizCoinTested = true;
+            assert(prob.visualSpec.showLabels === false, "K Node 16 practice coins must hide value labels");
+          }
         }
       }
     }
+    assert(node3Saw9thOr10th, "K Node 3 Tier 3 should reach 9th/10th ordinals");
+    assert(node16QuizCoinTested, "K Node 16 coin quiz audit missing");
 
     // Test K Adaptive State Machine
     App.init();
@@ -378,16 +423,26 @@ def run_kindergarten_jsc_audit():
     var kw2 = App.currentProblem.choices[0] === App.currentProblem.answer ? App.currentProblem.choices[1] : App.currentProblem.choices[0];
     App.handleAnswerAttempt(kw2, null);
     assert(pk.tier === 2, "K 2 misses at Tier 3 must step down to Tier 2");
+    App.loadNextProblem(false);
+    assert(pk.tier === 2, "K loadNextProblem(false) must preserve 2-miss step-down to Tier 2");
 
-    // Test all 6 Garden Blocks Stations
+    // Test all 6 Garden Blocks Stations & Quiz Tab Switch Reset
     var kStations = ["frames", "bonds", "addsub", "shapespat", "balance", "timecoins"];
     for (var stIdx = 0; stIdx < kStations.length; stIdx++) {
       App.tabletopTool = kStations[stIdx];
+      App.tabletopQuizProblem = null;
       App.setTabletopMode("explore");
       assert(document.getElementById("tabletop-workspace").innerHTML.indexOf("TEACHING PROMPT:") !== -1, "K station explore failed");
       App.setTabletopMode("quiz");
       assert(document.getElementById("tabletop-workspace").innerHTML.indexOf("PRACTICE PROMPT:") !== -1, "K station quiz failed");
+      assert(App.tabletopQuizProblem !== null, "K station quiz problem missing");
     }
+    App.tabletopTool = "frames";
+    App.setTabletopMode("quiz");
+    var prevQuiz = App.tabletopQuizProblem;
+    App.openNodeInTabletop(14);
+    assert(App.tabletopQuizProblem !== null && App.tabletopQuizProblem !== prevQuiz && App.tabletopTool === "timecoins" && App.tabletopState.tcTab === "tens",
+      "K openNodeInTabletop must regenerate stale quiz problem and focus station sub-tab");
 
     // Test Per-Walk Reset
     App.state.nodeProgress[1] = { acorns: 4, tier: 3, mastered: true, stars: 2 };

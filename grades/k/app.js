@@ -20,6 +20,7 @@ const App = {
   visualHintVisible: true,
   missedCurrentProblem: false,
   consecutiveMisses: 0,
+  manualTierLock: false,
   recentProblemKeys: [],
   recentPraiseIdx: -1,
   tabletopTool: "frames",
@@ -33,15 +34,22 @@ const App = {
     bondMissing: "none",
     addA: 4,
     addB: 3,
-    subTake: 2,
+    subTake: 0,
+    shapeTab: "shapes",
     shapeKey: "triangle",
     patKind: "AB",
+    posRel: "above",
+    balanceTab: "weight",
     balLeft: 5,
     balRight: 3,
     lenA: 6,
     lenB: 4,
+    capLeftMore: true,
+    tcTab: "clock",
+    tensCount: 3,
+    onesCount: 4,
     clkHour: 3,
-    coinCounts: { 25: 0, 10: 1, 5: 1, 1: 2 }
+    coinsList: [10, 5, 1, 1]
   },
 
   init() {
@@ -181,9 +189,11 @@ const App = {
         const tier = parseInt(btn.dataset.tier, 10);
         const prog = this.getProgress(this.state.selectedNodeId);
         prog.tier = tier;
+        this.manualTierLock = true;
+        this.consecutiveMisses = 0;
         this.saveState();
         this.updateTierButtons();
-        if (this.state.studioMode === "trial") this.loadNextProblem(false);
+        if (this.state.studioMode === "trial") this.loadNextProblem(true);
       });
     });
 
@@ -216,6 +226,9 @@ const App = {
       this.closeModal("victory-modal");
       const prog = this.getProgress(this.state.selectedNodeId);
       prog.acorns = 0;
+      prog.tier = 1;
+      this.consecutiveMisses = 0;
+      this.manualTierLock = false;
       this.saveState();
       this.setStudioMode("trial");
     });
@@ -231,6 +244,7 @@ const App = {
     document.querySelectorAll("#tabletop-tool-tabs .tool-tab").forEach((tab) => {
       tab.addEventListener("click", () => {
         this.tabletopTool = tab.dataset.tool;
+        this.tabletopQuizProblem = null;
         this.renderTabletop();
       });
     });
@@ -341,6 +355,7 @@ const App = {
     this.state.learnStepIndex = 0;
     this.visualHintVisible = true;
     this.consecutiveMisses = 0;
+    this.manualTierLock = false;
     this.missedCurrentProblem = false;
     this.saveState();
 
@@ -440,11 +455,21 @@ const App = {
         btn.className = "learn-check-btn";
         btn.textContent = String(choice);
         btn.addEventListener("click", () => {
+          checkChoices.querySelectorAll(".learn-check-btn").forEach((b) => b.classList.remove("wrong"));
           if (choice === step.checkQuestion.answer) {
             btn.classList.add("correct");
+            const okMsg = step.checkQuestion.coachText || "Spot on! That matches the picture cleanly.";
+            document.getElementById("owl-prompt-text").textContent = okMsg;
+            document.getElementById("pg-live-coach-text").textContent = okMsg;
+            if (step.checkQuestion.solvedEquationHTML) {
+              document.getElementById("main-equation-banner").innerHTML = step.checkQuestion.solvedEquationHTML;
+            }
             SharedAudioEngine.playChime("success");
           } else {
             btn.classList.add("wrong");
+            const tryMsg = "Look closely at the picture above and try one of the other choices!";
+            document.getElementById("owl-prompt-text").textContent = tryMsg;
+            document.getElementById("pg-live-coach-text").textContent = tryMsg;
             SharedAudioEngine.playChime("encourage");
           }
         });
@@ -477,10 +502,9 @@ const App = {
   loadNextProblem(keepTier = false) {
     const node = this.getNode(this.state.selectedNodeId);
     const prog = this.getProgress(node.id);
-
     if (!keepTier) {
-      if (prog.acorns >= 3) prog.tier = Math.max(prog.tier, 3);
-      else if (prog.acorns >= 2) prog.tier = Math.max(prog.tier, 2);
+      // Preserve parent overrides and 2-miss step-downs rather than snapping upward on reload.
+      prog.tier = Math.max(1, Math.min(3, prog.tier || 1));
     }
     this.updateTierButtons();
 
@@ -537,6 +561,11 @@ const App = {
       if (!this.missedCurrentProblem || parentFluent) {
         this.consecutiveMisses = 0;
         prog.acorns = Math.min(ACORNS_PER_WALK, prog.acorns + 1);
+        if (!this.manualTierLock) {
+          if (prog.acorns >= 3) prog.tier = Math.max(prog.tier, 3);
+          else if (prog.acorns >= 2) prog.tier = Math.max(prog.tier, 2);
+        }
+        this.updateTierButtons();
         document.getElementById("owl-prompt-text").textContent = this.pickPraise();
         SharedAudioEngine.playChime("success");
       } else {
@@ -612,6 +641,8 @@ const App = {
     const id = this.state.selectedNodeId;
     this.state.nodeProgress[id] = { acorns: 0, tier: 1, mastered: false, stars: 0 };
     this.state.learnStepIndex = 0;
+    this.consecutiveMisses = 0;
+    this.manualTierLock = false;
     this.saveState();
     this.updateHeaderStatus();
     this.renderAcornBar();
@@ -651,6 +682,16 @@ const App = {
   openNodeInTabletop(nodeId) {
     const node = this.getNode(nodeId);
     this.tabletopTool = node.tabletopTool || "frames";
+    this.tabletopQuizProblem = null;
+    if (nodeId === 1) this.tabletopState.shapeTab = "position";
+    else if (nodeId === 4) this.tabletopState.shapeTab = "shapes";
+    else if (nodeId === 14) this.tabletopState.tcTab = "tens";
+    else if (nodeId === 15) this.tabletopState.tcTab = "clock";
+    else if (nodeId === 16 || nodeId === 17) this.tabletopState.tcTab = "coins";
+    if (nodeId === 8) {
+      this.tabletopState.frameMax = 20;
+      this.tabletopState.frameCount = Math.max(11, this.tabletopState.frameCount);
+    }
     this.switchView("tabletop");
   },
 
@@ -665,66 +706,204 @@ const App = {
   generateTabletopQuiz() {
     const tool = this.tabletopTool;
     if (tool === "frames") {
-      const n = kRandInt(1, 10);
-      this.tabletopQuizProblem = {
-        prompt: "PRACTICE PROMPT: How many berries are in the frame?",
-        spec: n <= 5 ? { type: "five-frame", count: n, itemType: "berry" } : { type: "ten-frame", count: n, itemType: "berry", partA: 5 },
-        answer: n,
-        choices: makeNumericChoices(n, 0, 10)
-      };
+      const modeRoll = kRandInt(0, 2);
+      if (modeRoll === 2) {
+        const n = kRandInt(11, 20);
+        this.tabletopQuizProblem = {
+          prompt: "PRACTICE PROMPT: Count on from the full frame of 10! How many altogether?",
+          spec: { type: "double-ten-frame", count: n, itemType: "acorn", showLabels: false },
+          answer: n,
+          choices: makeNumericChoices(n, 10, 20)
+        };
+      } else {
+        const n = kRandInt(0, 10);
+        this.tabletopQuizProblem = {
+          prompt: "PRACTICE PROMPT: How many berries are in the frame?",
+          spec: n <= 5 ? { type: "five-frame", count: n, itemType: "berry" } : { type: "ten-frame", count: n, itemType: "berry", partA: 5 },
+          answer: n,
+          choices: makeNumericChoices(n, 0, 10)
+        };
+      }
     } else if (tool === "bonds") {
       const w = kRandInt(4, 10);
-      const a = kRandInt(1, w - 1);
+      const a = kRandInt(0, w);
       const b = w - a;
-      this.tabletopQuizProblem = {
-        prompt: `PRACTICE PROMPT: Whole is ${w} and one Part is ${a}. Find the missing Part!`,
-        spec: { type: "number-bond", whole: w, partA: a, partB: b, missing: "partB", showDots: true },
-        answer: b,
-        choices: makeNumericChoices(b, 0, 10)
-      };
+      const missing = kPick(["whole", "partA", "partB"]);
+      const showDots = kRandInt(0, 1) === 1;
+      if (missing === "whole") {
+        this.tabletopQuizProblem = {
+          prompt: `PRACTICE PROMPT: Parts are ${a} and ${b}. What is the Whole?`,
+          spec: { type: "number-bond", whole: w, partA: a, partB: b, missing: "whole", showDots },
+          answer: w,
+          choices: makeNumericChoices(w, 1, 10)
+        };
+      } else if (missing === "partA") {
+        this.tabletopQuizProblem = {
+          prompt: `PRACTICE PROMPT: Whole is ${w} and one Part is ${b}. Find the missing Part!`,
+          spec: { type: "number-bond", whole: w, partA: a, partB: b, missing: "partA", showDots },
+          answer: a,
+          choices: makeNumericChoices(a, 0, 10)
+        };
+      } else {
+        this.tabletopQuizProblem = {
+          prompt: `PRACTICE PROMPT: Whole is ${w} and one Part is ${a}. Find the missing Part!`,
+          spec: { type: "number-bond", whole: w, partA: a, partB: b, missing: "partB", showDots },
+          answer: b,
+          choices: makeNumericChoices(b, 0, 10)
+        };
+      }
     } else if (tool === "addsub") {
-      const a = kRandInt(2, 6);
-      const b = kRandInt(1, 10 - a);
-      this.tabletopQuizProblem = {
-        prompt: `PRACTICE PROMPT: What is ${a} + ${b}?`,
-        spec: { type: "ten-frame", count: a + b, itemType: "apple", partA: a },
-        answer: a + b,
-        choices: makeNumericChoices(a + b, 2, 10)
-      };
+      const kind = kPick(["add", "sub", "story"]);
+      if (kind === "add") {
+        const a = kRandInt(2, 6);
+        const b = kRandInt(1, 10 - a);
+        this.tabletopQuizProblem = {
+          prompt: `PRACTICE PROMPT: What is ${a} + ${b}?`,
+          spec: { type: "ten-frame", count: a + b, itemType: "apple", partA: a },
+          answer: a + b,
+          choices: makeNumericChoices(a + b, 2, 10)
+        };
+      } else if (kind === "sub") {
+        const w = kRandInt(5, 10);
+        const t = kRandInt(1, w - 1);
+        this.tabletopQuizProblem = {
+          prompt: `PRACTICE PROMPT: ${w} apples, and ${t} are crossed out. What is ${w} − ${t}?`,
+          spec: { type: "ten-frame", count: w, itemType: "apple", partA: w, crossOut: t },
+          answer: w - t,
+          choices: makeNumericChoices(w - t, 0, 9)
+        };
+      } else {
+        const isAdd = kRandInt(0, 1) === 1;
+        if (isAdd) {
+          const a = kRandInt(2, 5);
+          const b = kRandInt(1, 9 - a);
+          this.tabletopQuizProblem = {
+            prompt: `PRACTICE PROMPT: Pip had ${a} honey jars and packed ${b} MORE. How many altogether?`,
+            spec: { type: "story-scene", countA: a, itemA: "honeyjar", labelA: `First (${a})`, countB: b, itemB: "honeyjar", labelB: `${b} More Join` },
+            answer: a + b,
+            choices: makeNumericChoices(a + b, 2, 10)
+          };
+        } else {
+          const w = kRandInt(5, 9);
+          const t = kRandInt(1, w - 1);
+          this.tabletopQuizProblem = {
+            prompt: `PRACTICE PROMPT: Pip brought ${w} berries and shared ${t}. How many berries remain?`,
+            spec: { type: "story-scene", countA: w, itemA: "berry", labelA: `At Start (${w})`, countB: t, itemB: "berry", labelB: `${t} Shared` },
+            answer: w - t,
+            choices: makeNumericChoices(w - t, 0, 9)
+          };
+        }
+      }
     } else if (tool === "shapespat") {
-      const s = kPick([
-        { key: "triangle", name: "Triangle" },
-        { key: "square", name: "Square" },
-        { key: "hexagon", name: "Hexagon" },
-        { key: "cylinder", name: "Cylinder" }
-      ]);
-      this.tabletopQuizProblem = {
-        prompt: "PRACTICE PROMPT: Which shape is shown here?",
-        spec: { type: "shapes", shapeKey: s.key, showVertices: true },
-        answer: s.name,
-        choices: ["Triangle", "Square", "Hexagon", "Cylinder"]
-      };
+      const kind = kPick(["shape", "pattern", "position"]);
+      if (kind === "shape") {
+        const s = kPick([
+          { key: "triangle", name: "Triangle" },
+          { key: "square", name: "Square" },
+          { key: "hexagon", name: "Hexagon" },
+          { key: "cylinder", name: "Cylinder" }
+        ]);
+        this.tabletopQuizProblem = {
+          prompt: "PRACTICE PROMPT: Which shape is shown here?",
+          spec: { type: "shapes", shapeKey: s.key, showVertices: true },
+          answer: s.name,
+          choices: ["Triangle", "Square", "Hexagon", "Cylinder"]
+        };
+      } else if (kind === "pattern") {
+        const pats = [
+          { seq: [{ itemType: "acorn" }, { itemType: "leaf" }, { itemType: "acorn" }, { itemType: "leaf" }], ans: "Acorn" },
+          { seq: [{ itemType: "berry" }, { itemType: "berry" }, { itemType: "daisy" }, { itemType: "berry" }, { itemType: "berry" }], ans: "Daisy" },
+          { seq: [{ itemType: "acorn" }, { itemType: "leaf" }, { itemType: "berry" }, { itemType: "acorn" }, { itemType: "leaf" }], ans: "Berry" }
+        ];
+        const p = kPick(pats);
+        this.tabletopQuizProblem = {
+          prompt: "PRACTICE PROMPT: Chant the repeating pattern! What comes next?",
+          spec: { type: "pattern-row", tokens: p.seq, showQuestion: true },
+          answer: p.ans,
+          choices: makeWordChoices(p.ans, ["Acorn", "Leaf", "Berry", "Daisy"])
+        };
+      } else {
+        const rel = kPick(["above", "below", "beside"]);
+        const labelMap = { above: "Above", below: "Below", beside: "Beside" };
+        this.tabletopQuizProblem = {
+          prompt: "PRACTICE PROMPT: Where is the ladybug compared to the cube?",
+          spec: { type: "shapes", mode: "position", relation: rel, topItem: "ladybug", baseShape: "cube" },
+          answer: labelMap[rel],
+          choices: ["Above", "Below", "Beside", "Inside"]
+        };
+      }
     } else if (tool === "balance") {
-      const lw = kPick([2, 8]);
-      const rw = lw === 2 ? 8 : 2;
-      const ans = lw > rw ? "Apple" : "Acorn";
-      this.tabletopQuizProblem = {
-        prompt: "PRACTICE PROMPT: Which side of the balance scale is HEAVIER?",
-        spec: { type: "pan-balance", leftItem: "apple", leftWeight: lw, rightItem: "acorn", rightWeight: rw, leftLabel: "Apple", rightLabel: "Acorn" },
-        answer: ans,
-        choices: ["Apple", "Acorn", "Equal", "Neither"]
-      };
+      const kind = kPick(["weight", "length", "capacity"]);
+      if (kind === "weight") {
+        const lw = kPick([2, 8]);
+        const rw = lw === 2 ? 8 : 2;
+        const ans = lw > rw ? "Apple" : "Acorn";
+        this.tabletopQuizProblem = {
+          prompt: "PRACTICE PROMPT: Which side of the balance scale is HEAVIER?",
+          spec: { type: "pan-balance", leftItem: "apple", leftWeight: lw, rightItem: "acorn", rightWeight: rw, leftLabel: "Apple", rightLabel: "Acorn" },
+          answer: ans,
+          choices: ["Apple", "Acorn", "Equal", "Neither"]
+        };
+      } else if (kind === "length") {
+        const lenA = kRandInt(4, 8);
+        let lenB = kRandInt(2, 7);
+        if (lenA === lenB) lenB = Math.max(2, lenA - 2);
+        const ans = lenA > lenB ? "Pine Stick" : "Oak Twig";
+        this.tabletopQuizProblem = {
+          prompt: "PRACTICE PROMPT: Compare both lined-up sticks. Which one is LONGER?",
+          spec: { type: "length-compare", labelA: "Pine Stick", lenA, labelB: "Oak Twig", lenB },
+          answer: ans,
+          choices: ["Pine Stick", "Oak Twig", "Same Length", "Zero"]
+        };
+      } else {
+        const leftBig = kRandInt(0, 1) === 1;
+        this.tabletopQuizProblem = {
+          prompt: "PRACTICE PROMPT: Which container holds MORE water?",
+          spec: {
+            type: "capacity-jars",
+            leftLabel: leftBig ? "Big Pitcher" : "Small Cup",
+            leftFill: leftBig ? 85 : 25,
+            rightLabel: leftBig ? "Small Cup" : "Big Pitcher",
+            rightFill: leftBig ? 25 : 85
+          },
+          answer: "Big Pitcher",
+          choices: ["Big Pitcher", "Small Cup", "Same Amount", "Empty"]
+        };
+      }
     } else {
-      const h = kRandInt(1, 12);
-      const ans = `${h}:00`;
-      const set = new Set([ans]);
-      while (set.size < 4) set.add(`${kRandInt(1, 12)}:00`);
-      this.tabletopQuizProblem = {
-        prompt: "PRACTICE PROMPT: What time does the garden clock show?",
-        spec: { type: "clock-hour", hour: h, minutes: 0, skyPhase: "Practice Clock" },
-        answer: ans,
-        choices: Array.from(set).sort((a, b) => parseInt(a, 10) - parseInt(b, 10))
-      };
+      const kind = kPick(["tens", "clock", "coins"]);
+      if (kind === "tens") {
+        const t = kRandInt(2, 9);
+        const o = kRandInt(0, 9);
+        const val = t * 10 + o;
+        this.tabletopQuizProblem = {
+          prompt: "PRACTICE PROMPT: Count the baskets of 10 first, then the loose ones! What number is shown?",
+          spec: { type: "tens-ones-100", tens: t, ones: o },
+          answer: val,
+          choices: makeNumericChoices(val, 15, 99)
+        };
+      } else if (kind === "coins") {
+        const combos = [[1, 1, 1], [5, 5], [10, 10], [10, 5], [25, 1]];
+        const coins = kPick(combos);
+        const total = coins.reduce((a, b) => a + b, 0);
+        this.tabletopQuizProblem = {
+          prompt: "PRACTICE PROMPT: Count these coins by look and size! How many cents in all?",
+          spec: { type: "coins", coins, showLabels: false },
+          answer: total,
+          choices: makeNumericChoices(total, 1, 35)
+        };
+      } else {
+        const h = kRandInt(1, 12);
+        const ans = `${h}:00`;
+        const set = new Set([ans]);
+        while (set.size < 4) set.add(`${kRandInt(1, 12)}:00`);
+        this.tabletopQuizProblem = {
+          prompt: "PRACTICE PROMPT: What time does the garden clock show?",
+          spec: { type: "clock-hour", hour: h, minutes: 0, skyPhase: "Practice Clock" },
+          answer: ans,
+          choices: Array.from(set).sort((a, b) => parseInt(a, 10) - parseInt(b, 10))
+        };
+      }
     }
   },
 
@@ -775,13 +954,18 @@ const App = {
     let controlsHTML = "";
 
     if (this.tabletopTool === "frames") {
-      promptText = `TEACHING PROMPT: Tap + or - to show numbers on a ${st.frameMax === 5 ? "5-Frame" : "10-Frame"} (${st.frameCount} shown).`;
-      spec = st.frameMax === 5
-        ? { type: "five-frame", count: Math.min(5, st.frameCount), itemType: "acorn" }
-        : { type: "ten-frame", count: Math.min(10, st.frameCount), itemType: "berry", partA: 5 };
+      const fMax = st.frameMax;
+      st.frameCount = Math.min(fMax, st.frameCount);
+      promptText = `TEACHING PROMPT: Tap + or - on a ${fMax === 5 ? "5-Frame" : fMax === 10 ? "10-Frame" : "Double 10-Frame (Teens)"} — ${st.frameCount} shown.`;
+      spec = fMax === 5
+        ? { type: "five-frame", count: st.frameCount, itemType: "acorn" }
+        : fMax === 10
+          ? { type: "ten-frame", count: st.frameCount, itemType: "berry", partA: 5 }
+          : { type: "double-ten-frame", count: st.frameCount, itemType: "acorn", showLabels: true };
       controlsHTML = `
-        <button class="tt-ctrl-btn${st.frameMax === 5 ? " active" : ""}" data-act="fmax5">5-Frame</button>
-        <button class="tt-ctrl-btn${st.frameMax === 10 ? " active" : ""}" data-act="fmax10">10-Frame</button>
+        <button class="tt-ctrl-btn${fMax === 5 ? " active" : ""}" data-act="fmax5">5-Frame</button>
+        <button class="tt-ctrl-btn${fMax === 10 ? " active" : ""}" data-act="fmax10">10-Frame</button>
+        <button class="tt-ctrl-btn${fMax === 20 ? " active" : ""}" data-act="fmax20">20-Frame (Teens)</button>
         <button class="tt-ctrl-btn" data-act="fminus">− 1</button>
         <button class="tt-ctrl-btn" data-act="fplus">+ 1</button>`;
     } else if (this.tabletopTool === "bonds") {
@@ -796,33 +980,119 @@ const App = {
         <button class="tt-ctrl-btn" data-act="bToggleHide">${st.bondMissing === "none" ? "Hide Part B" : "Show All"}</button>`;
     } else if (this.tabletopTool === "addsub") {
       const total = Math.min(10, st.addA + st.addB);
-      promptText = `TEACHING PROMPT: ${st.addA} + ${st.addB} = ${total} (or cross out ${st.subTake} to practice subtraction!).`;
-      spec = { type: "ten-frame", count: total, itemType: "apple", partA: st.addA, crossOut: Math.min(total, st.subTake) };
+      st.subTake = Math.min(total, st.subTake);
+      promptText = st.subTake > 0
+        ? `TEACHING PROMPT: Start with ${total} apples, cross out ${st.subTake}: ${total} − ${st.subTake} = ${total - st.subTake}!`
+        : `TEACHING PROMPT: ${st.addA} + ${st.addB} = ${total} (tap Cross Out + to explore take-away!).`;
+      spec = { type: "ten-frame", count: total, itemType: "apple", partA: st.addA, crossOut: st.subTake };
       controlsHTML = `
         <button class="tt-ctrl-btn" data-act="addA">Part A (${st.addA}) +</button>
         <button class="tt-ctrl-btn" data-act="addB">Part B (${st.addB}) +</button>
         <button class="tt-ctrl-btn" data-act="crossMore">Cross Out (${st.subTake}) +</button>
         <button class="tt-ctrl-btn" data-act="crossClear">Clear Cross-Outs</button>`;
     } else if (this.tabletopTool === "shapespat") {
-      promptText = `TEACHING PROMPT: Inspect corners and faces of 2D & 3D shapes (${st.shapeKey}).`;
-      spec = { type: "shapes", shapeKey: st.shapeKey, showVertices: true };
-      controlsHTML = ["circle", "triangle", "square", "rectangle", "hexagon", "sphere", "cube", "cylinder", "cone"]
-        .map((s) => `<button class="tt-ctrl-btn${st.shapeKey === s ? " active" : ""}" data-shape="${s}">${s}</button>`)
-        .join("");
+      const subBar = `
+        <button class="tt-ctrl-btn${st.shapeTab === "shapes" ? " active" : ""}" data-act="spShapes">2D &amp; 3D Shapes</button>
+        <button class="tt-ctrl-btn${st.shapeTab === "pattern" ? " active" : ""}" data-act="spPattern">Patterns</button>
+        <button class="tt-ctrl-btn${st.shapeTab === "position" ? " active" : ""}" data-act="spPosition">Position &amp; L/R</button>`;
+      if (st.shapeTab === "pattern") {
+        const patMap = {
+          AB: { desc: "A – B – A – B", tokens: [{ itemType: "acorn" }, { itemType: "leaf" }, { itemType: "acorn" }, { itemType: "leaf" }] },
+          AAB: { desc: "A – A – B – A – A", tokens: [{ itemType: "berry" }, { itemType: "berry" }, { itemType: "daisy" }, { itemType: "berry" }, { itemType: "berry" }] },
+          ABC: { desc: "A – B – C – A – B", tokens: [{ itemType: "acorn" }, { itemType: "leaf" }, { itemType: "berry" }, { itemType: "acorn" }, { itemType: "leaf" }] }
+        };
+        const pat = patMap[st.patKind] || patMap.AB;
+        promptText = `TEACHING PROMPT: Chant the ${st.patKind} pattern (${pat.desc}) and ask what belongs in ? next!`;
+        spec = { type: "pattern-row", tokens: pat.tokens, showQuestion: true };
+        controlsHTML = `${subBar}
+          <button class="tt-ctrl-btn${st.patKind === "AB" ? " active" : ""}" data-pat="AB">AB Pattern</button>
+          <button class="tt-ctrl-btn${st.patKind === "AAB" ? " active" : ""}" data-pat="AAB">AAB Pattern</button>
+          <button class="tt-ctrl-btn${st.patKind === "ABC" ? " active" : ""}" data-pat="ABC">ABC Pattern</button>`;
+      } else if (st.shapeTab === "position") {
+        if (st.posRel === "leftright") {
+          promptText = `TEACHING PROMPT: Point to Pip’s LEFT oak acorn and RIGHT berry!`;
+          spec = { type: "left-right", leftItem: "acorn", rightItem: "berry", showSideLabels: true };
+        } else {
+          promptText = `TEACHING PROMPT: Look where the ladybug sits (${st.posRel.toUpperCase()} the cube)!`;
+          spec = { type: "shapes", mode: "position", relation: st.posRel, topItem: "ladybug", baseShape: "cube" };
+        }
+        controlsHTML = `${subBar}
+          <button class="tt-ctrl-btn${st.posRel === "above" ? " active" : ""}" data-pos="above">Above</button>
+          <button class="tt-ctrl-btn${st.posRel === "below" ? " active" : ""}" data-pos="below">Below</button>
+          <button class="tt-ctrl-btn${st.posRel === "beside" ? " active" : ""}" data-pos="beside">Beside</button>
+          <button class="tt-ctrl-btn${st.posRel === "leftright" ? " active" : ""}" data-pos="leftright">Left / Right</button>`;
+      } else {
+        promptText = `TEACHING PROMPT: Inspect corners and faces of 2D & 3D shapes (${st.shapeKey}).`;
+        spec = { type: "shapes", shapeKey: st.shapeKey, showVertices: true };
+        controlsHTML = subBar + ["circle", "triangle", "square", "rectangle", "hexagon", "sphere", "cube", "cylinder", "cone"]
+          .map((s) => `<button class="tt-ctrl-btn${st.shapeKey === s ? " active" : ""}" data-shape="${s}">${s}</button>`)
+          .join("");
+      }
     } else if (this.tabletopTool === "balance") {
-      promptText = `TEACHING PROMPT: Compare weights on the pinewood balance scale (Left: ${st.balLeft}, Right: ${st.balRight}).`;
-      spec = { type: "pan-balance", leftItem: "apple", leftWeight: st.balLeft, rightItem: "acorn", rightWeight: st.balRight, leftLabel: `Left (${st.balLeft})`, rightLabel: `Right (${st.balRight})` };
-      controlsHTML = `
-        <button class="tt-ctrl-btn" data-act="blMinus">Left −</button>
-        <button class="tt-ctrl-btn" data-act="blPlus">Left +</button>
-        <button class="tt-ctrl-btn" data-act="brMinus">Right −</button>
-        <button class="tt-ctrl-btn" data-act="brPlus">Right +</button>`;
+      const subBar = `
+        <button class="tt-ctrl-btn${st.balanceTab === "weight" ? " active" : ""}" data-act="balWeight">Scale</button>
+        <button class="tt-ctrl-btn${st.balanceTab === "length" ? " active" : ""}" data-act="balLength">Length Bars</button>
+        <button class="tt-ctrl-btn${st.balanceTab === "capacity" ? " active" : ""}" data-act="balCapacity">Capacity</button>`;
+      if (st.balanceTab === "length") {
+        promptText = `TEACHING PROMPT: Compare Pine Stick (${st.lenA} blocks) vs Oak Twig (${st.lenB} blocks) lined up on the left!`;
+        spec = { type: "length-compare", labelA: "Pine Stick", lenA: st.lenA, labelB: "Oak Twig", lenB: st.lenB };
+        controlsHTML = `${subBar}
+          <button class="tt-ctrl-btn" data-act="laMinus">Pine −</button>
+          <button class="tt-ctrl-btn" data-act="laPlus">Pine +</button>
+          <button class="tt-ctrl-btn" data-act="lbMinus">Oak −</button>
+          <button class="tt-ctrl-btn" data-act="lbPlus">Oak +</button>`;
+      } else if (st.balanceTab === "capacity") {
+        promptText = `TEACHING PROMPT: Compare the tall handled Pitcher vs the small Cup—which holds MORE water?`;
+        spec = {
+          type: "capacity-jars",
+          leftLabel: st.capLeftMore ? "Tall Pitcher" : "Small Cup",
+          leftFill: st.capLeftMore ? 85 : 25,
+          rightLabel: st.capLeftMore ? "Small Cup" : "Tall Pitcher",
+          rightFill: st.capLeftMore ? 25 : 85
+        };
+        controlsHTML = `${subBar}
+          <button class="tt-ctrl-btn" data-act="capSwap">Swap Pitcher &amp; Cup</button>`;
+      } else {
+        promptText = `TEACHING PROMPT: Compare weights on the pinewood balance scale (Left: ${st.balLeft}, Right: ${st.balRight}).`;
+        spec = { type: "pan-balance", leftItem: "apple", leftWeight: st.balLeft, rightItem: "acorn", rightWeight: st.balRight, leftLabel: `Left (${st.balLeft})`, rightLabel: `Right (${st.balRight})` };
+        controlsHTML = `${subBar}
+          <button class="tt-ctrl-btn" data-act="blMinus">Left −</button>
+          <button class="tt-ctrl-btn" data-act="blPlus">Left +</button>
+          <button class="tt-ctrl-btn" data-act="brMinus">Right −</button>
+          <button class="tt-ctrl-btn" data-act="brPlus">Right +</button>`;
+      }
     } else {
-      promptText = `TEACHING PROMPT: Practice reading ${st.clkHour}:00 (${st.clkHour} o'clock) on the garden clock.`;
-      spec = { type: "clock-hour", hour: st.clkHour, minutes: 0, skyPhase: `${st.clkHour} o'clock` };
-      controlsHTML = `
-        <button class="tt-ctrl-btn" data-act="hrPrev">− 1 Hour</button>
-        <button class="tt-ctrl-btn" data-act="hrNext">+ 1 Hour</button>`;
+      const subBar = `
+        <button class="tt-ctrl-btn${st.tcTab === "tens" ? " active" : ""}" data-act="tcTens">100s Tens &amp; Ones</button>
+        <button class="tt-ctrl-btn${st.tcTab === "clock" ? " active" : ""}" data-act="tcClock">Clock</button>
+        <button class="tt-ctrl-btn${st.tcTab === "coins" ? " active" : ""}" data-act="tcCoins">Coins</button>`;
+      if (st.tcTab === "tens") {
+        if (st.tensCount >= 10) st.onesCount = 0;
+        const total = st.tensCount * 10 + st.onesCount;
+        promptText = `TEACHING PROMPT: Build numbers up to 100! ${st.tensCount} Tens and ${st.onesCount} Ones = ${total}.`;
+        spec = { type: "tens-ones-100", tens: st.tensCount, ones: st.onesCount };
+        controlsHTML = `${subBar}
+          <button class="tt-ctrl-btn" data-act="tensMinus">Tens −</button>
+          <button class="tt-ctrl-btn" data-act="tensPlus">Tens +</button>
+          <button class="tt-ctrl-btn" data-act="onesMinus">Ones −</button>
+          <button class="tt-ctrl-btn" data-act="onesPlus">Ones +</button>`;
+      } else if (st.tcTab === "coins") {
+        const sum = st.coinsList.reduce((a, b) => a + b, 0);
+        promptText = `TEACHING PROMPT: Compare coin sizes & values on the mat! Total shown = ${sum}¢.`;
+        spec = { type: "coins", coins: st.coinsList.length ? st.coinsList : [1], showLabels: true };
+        controlsHTML = `${subBar}
+          <button class="tt-ctrl-btn" data-act="coinAdd25">+ Quarter (25¢)</button>
+          <button class="tt-ctrl-btn" data-act="coinAdd10">+ Dime (10¢)</button>
+          <button class="tt-ctrl-btn" data-act="coinAdd5">+ Nickel (5¢)</button>
+          <button class="tt-ctrl-btn" data-act="coinAdd1">+ Penny (1¢)</button>
+          <button class="tt-ctrl-btn" data-act="coinClear">Reset Coin</button>`;
+      } else {
+        promptText = `TEACHING PROMPT: Practice reading ${st.clkHour}:00 (${st.clkHour} o'clock) on the garden clock.`;
+        spec = { type: "clock-hour", hour: st.clkHour, minutes: 0, skyPhase: `${st.clkHour} o'clock` };
+        controlsHTML = `${subBar}
+          <button class="tt-ctrl-btn" data-act="hrPrev">− 1 Hour</button>
+          <button class="tt-ctrl-btn" data-act="hrNext">+ 1 Hour</button>`;
+      }
     }
 
     ws.innerHTML = `<div class="tt-prompt-bar">${promptText}</div>
@@ -838,28 +1108,66 @@ const App = {
       });
     });
 
+    ws.querySelectorAll("[data-pat]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        st.patKind = btn.dataset.pat;
+        this.renderTabletop();
+      });
+    });
+
+    ws.querySelectorAll("[data-pos]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        st.posRel = btn.dataset.pos;
+        this.renderTabletop();
+      });
+    });
+
     ws.querySelectorAll("[data-act]").forEach((btn) => {
       btn.addEventListener("click", () => {
         const a = btn.dataset.act;
         if (a === "fmax5") { st.frameMax = 5; st.frameCount = Math.min(5, st.frameCount); }
-        if (a === "fmax10") { st.frameMax = 10; }
+        if (a === "fmax10") { st.frameMax = 10; st.frameCount = Math.min(10, st.frameCount); }
+        if (a === "fmax20") { st.frameMax = 20; if (st.frameCount < 11) st.frameCount = 12; }
         if (a === "fminus") st.frameCount = Math.max(0, st.frameCount - 1);
         if (a === "fplus") st.frameCount = Math.min(st.frameMax, st.frameCount + 1);
-        if (a === "bwMinus") { st.bondWhole = Math.max(2, st.bondWhole - 1); st.bondPartA = Math.min(st.bondPartA, st.bondWhole - 1); }
+        if (a === "bwMinus") { st.bondWhole = Math.max(2, st.bondWhole - 1); st.bondPartA = Math.min(st.bondPartA, st.bondWhole); }
         if (a === "bwPlus") st.bondWhole = Math.min(10, st.bondWhole + 1);
         if (a === "baMinus") st.bondPartA = Math.max(0, st.bondPartA - 1);
         if (a === "baPlus") st.bondPartA = Math.min(st.bondWhole, st.bondPartA + 1);
         if (a === "bToggleHide") st.bondMissing = st.bondMissing === "none" ? "partB" : "none";
         if (a === "addA") st.addA = (st.addA % 5) + 1;
         if (a === "addB") st.addB = (st.addB % 5) + 1;
-        if (a === "crossMore") st.subTake = (st.subTake + 1) % 6;
+        if (a === "crossMore") st.subTake = st.subTake >= st.addA + st.addB ? 0 : st.subTake + 1;
         if (a === "crossClear") st.subTake = 0;
+        if (a === "spShapes") st.shapeTab = "shapes";
+        if (a === "spPattern") st.shapeTab = "pattern";
+        if (a === "spPosition") st.shapeTab = "position";
+        if (a === "balWeight") st.balanceTab = "weight";
+        if (a === "balLength") st.balanceTab = "length";
+        if (a === "balCapacity") st.balanceTab = "capacity";
+        if (a === "laMinus") st.lenA = Math.max(1, st.lenA - 1);
+        if (a === "laPlus") st.lenA = Math.min(9, st.lenA + 1);
+        if (a === "lbMinus") st.lenB = Math.max(1, st.lenB - 1);
+        if (a === "lbPlus") st.lenB = Math.min(9, st.lenB + 1);
+        if (a === "capSwap") st.capLeftMore = !st.capLeftMore;
         if (a === "blMinus") st.balLeft = Math.max(1, st.balLeft - 1);
         if (a === "blPlus") st.balLeft = Math.min(10, st.balLeft + 1);
         if (a === "brMinus") st.balRight = Math.max(1, st.balRight - 1);
         if (a === "brPlus") st.balRight = Math.min(10, st.balRight + 1);
+        if (a === "tcTens") st.tcTab = "tens";
+        if (a === "tcClock") st.tcTab = "clock";
+        if (a === "tcCoins") st.tcTab = "coins";
+        if (a === "tensMinus") st.tensCount = Math.max(1, st.tensCount - 1);
+        if (a === "tensPlus") { st.tensCount = Math.min(10, st.tensCount + 1); if (st.tensCount === 10) st.onesCount = 0; }
+        if (a === "onesMinus") st.onesCount = Math.max(0, st.onesCount - 1);
+        if (a === "onesPlus") { if (st.tensCount < 10) st.onesCount = Math.min(9, st.onesCount + 1); }
         if (a === "hrPrev") st.clkHour = st.clkHour === 1 ? 12 : st.clkHour - 1;
         if (a === "hrNext") st.clkHour = st.clkHour === 12 ? 1 : st.clkHour + 1;
+        if (a === "coinAdd25" && st.coinsList.length < 8) st.coinsList.push(25);
+        if (a === "coinAdd10" && st.coinsList.length < 8) st.coinsList.push(10);
+        if (a === "coinAdd5" && st.coinsList.length < 8) st.coinsList.push(5);
+        if (a === "coinAdd1" && st.coinsList.length < 8) st.coinsList.push(1);
+        if (a === "coinClear") st.coinsList = [1];
         this.renderTabletop();
       });
     });

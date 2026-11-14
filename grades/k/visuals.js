@@ -214,19 +214,24 @@ const GardenVisuals = {
       }
 
       case "double-ten-frame": {
-        html = CPAPrimitives.renderDoubleTenFrameHTML(spec.count, spec.itemType || "acorn");
+        html = CPAPrimitives.renderDoubleTenFrameHTML(spec.count, spec.itemType || "acorn", {
+          showLabels: spec.showLabels !== false
+        });
         break;
       }
 
       case "ordinal-line": {
+        const showNums = spec.showNumbers !== false;
+        const cellW = spec.total > 7 ? 50 : 58;
         let cells = "";
         for (let i = 1; i <= spec.total; i++) {
           const isTarget = i === spec.targetIndex;
           const bg = isTarget ? "#FFF0C2" : "#F6FAF3";
           const border = isTarget ? "#D99B26" : "#9CB894";
-          cells += `<div class="ordinal-slot" style="width:58px;padding:6px 4px;border:2.5px solid ${border};background:${bg};border-radius:12px;display:flex;flex-direction:column;align-items:center;gap:2px;">
-            ${CPAPrimitives.getItemSVG(spec.itemType || "daisy", isTarget ? "secondary" : "primary", 34)}
-            <span style="font-size:11px;font-weight:800;color:#2E6F40;">${isTarget ? "?" : i}</span>
+          const subLabel = isTarget ? "?" : (showNums ? String(i) : (i === 1 ? "1st" : "·"));
+          cells += `<div class="ordinal-slot" style="width:${cellW}px;padding:6px 4px;border:2.5px solid ${border};background:${bg};border-radius:12px;display:flex;flex-direction:column;align-items:center;gap:2px;">
+            ${CPAPrimitives.getItemSVG(spec.itemType || "daisy", isTarget ? "secondary" : "primary", spec.total > 7 ? 30 : 34)}
+            <span style="font-size:11px;font-weight:800;color:#2E6F40;">${subLabel}</span>
           </div>`;
         }
         html = `<div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
@@ -255,6 +260,19 @@ const GardenVisuals = {
               <div>${itemB}</div>
               <div>${itemA}</div>
             </div>`;
+          }
+        } else if (spec.mode === "combine") {
+          if (spec.combo === "two-squares") {
+            html = `<svg width="180" height="110" viewBox="0 0 180 110" role="img" aria-label="Two squares side by side">
+              <rect x="20" y="20" width="70" height="70" fill="#67A66F" stroke="#204A26" stroke-width="3"/>
+              <rect x="90" y="20" width="70" height="70" fill="#82C289" stroke="#204A26" stroke-width="3"/>
+              <line x1="90" y1="20" x2="90" y2="90" stroke="#FAF6EC" stroke-width="2.5" stroke-dasharray="4,3"/>
+            </svg>`;
+          } else {
+            html = `<svg width="140" height="110" viewBox="0 0 140 110" role="img" aria-label="Two triangles forming a square">
+              <polygon points="25,15 115,15 25,95" fill="#67A66F" stroke="#204A26" stroke-width="3" stroke-linejoin="round"/>
+              <polygon points="115,15 115,95 25,95" fill="#82C289" stroke="#204A26" stroke-width="3" stroke-linejoin="round"/>
+            </svg>`;
           }
         } else {
           html = CPAPrimitives.renderShapeSVG(spec.shapeKey || "triangle", 126, !!spec.showVertices);
@@ -292,37 +310,151 @@ const GardenVisuals = {
         const makeBar = (label, len, color, border) => {
           let blocks = "";
           for (let i = 0; i < len; i++) {
-            blocks += `<div class="len-unit-block" style="width:40px;height:32px;border:2px solid ${border};background:${color};border-radius:6px;"></div>`;
+            blocks += `<div class="len-unit-block" style="width:36px;height:30px;border:2px solid ${border};background:${color};border-radius:6px;"></div>`;
           }
           return `<div style="display:flex;align-items:center;gap:10px;">
-            <span style="width:82px;text-align:right;font-weight:800;font-size:14px;color:#2A4B30;">${label}</span>
+            <span style="width:88px;text-align:right;font-weight:800;font-size:14px;color:#2A4B30;">${label}</span>
             <div style="display:flex;gap:3px;">${blocks}</div>
           </div>`;
         };
         html = `<div style="display:flex;flex-direction:column;gap:12px;align-items:flex-start;background:#F6FAF3;padding:14px 18px;border-radius:14px;border:2px solid #9BB892;">
           ${makeBar(spec.labelA || "Top", spec.lenA, "#83C47C", "#2E6F40")}
-          ${makeBar(spec.labelB || "Bottom", spec.lenB, "#F2C36B", "#9D6517")}
+          ${spec.labelB ? makeBar(spec.labelB, spec.lenB, "#F2C36B", "#9D6517") : ""}
+        </div>`;
+        break;
+      }
+
+      case "height-compare": {
+        const renderTree = (label, heightUnits, trunkColor, crownColor) => {
+          const hPx = Math.max(36, heightUnits * 18);
+          const yTop = 122 - hPx;
+          return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+            <svg width="90" height="132" viewBox="0 0 90 132" aria-label="${label}">
+              <line x1="8" y1="124" x2="82" y2="124" stroke="#6E5233" stroke-width="3" stroke-linecap="round"/>
+              <rect x="39" y="${yTop + 20}" width="12" height="${Math.max(16, hPx - 20)}" rx="3" fill="${trunkColor}" stroke="#4A2E16" stroke-width="2"/>
+              <ellipse cx="45" cy="${yTop + 18}" rx="26" ry="20" fill="${crownColor}" stroke="#204A26" stroke-width="2.4"/>
+            </svg>
+            <span style="font-size:13px;font-weight:800;color:#2A4B30;">${label}</span>
+          </div>`;
+        };
+        html = `<div style="display:flex;gap:32px;align-items:flex-end;justify-content:center;background:#F6FAF3;padding:12px 22px;border-radius:14px;border:2px solid #9BB892;">
+          ${renderTree(spec.labelA || "Pine", spec.heightA, "#8C5B32", "#4D8B4F")}
+          ${renderTree(spec.labelB || "Oak", spec.heightB, "#7A4C26", "#7AB85E")}
         </div>`;
         break;
       }
 
       case "capacity-jars": {
-        const renderJar = (label, fillPct, color) => {
-          const waterH = Math.round((fillPct / 100) * 76);
-          const waterY = 96 - waterH;
+        const renderContainer = (label, fillPct, color) => {
+          const isLarge = fillPct >= 55;
+          if (isLarge) {
+            return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+              <svg width="112" height="122" viewBox="0 0 112 122" aria-label="${label}">
+                <path d="M84 36 C100 36 100 72 84 72" fill="none" stroke="#3B5B6B" stroke-width="4" stroke-linecap="round"/>
+                <rect x="20" y="18" width="64" height="90" rx="12" fill="#F8FCFF" stroke="#3B5B6B" stroke-width="3"/>
+                <rect x="23" y="28" width="58" height="77" rx="8" fill="${color}" opacity="0.72"/>
+                <rect x="28" y="10" width="48" height="8" rx="3" fill="#B58E5A" stroke="#5E3719" stroke-width="2"/>
+              </svg>
+              <span style="font-size:14px;font-weight:800;color:#243E4D;">${label}</span>
+            </div>`;
+          }
           return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
-            <svg width="96" height="112" viewBox="0 0 96 112" aria-label="${label}">
-              <rect x="20" y="18" width="56" height="80" rx="10" fill="#F8FCFF" stroke="#3B5B6B" stroke-width="3"/>
-              <rect x="22" y="${waterY}" width="52" height="${waterH}" rx="6" fill="${color}" opacity="0.75"/>
-              <rect x="28" y="10" width="40" height="8" rx="3" fill="#B58E5A" stroke="#5E3719" stroke-width="2"/>
+            <svg width="90" height="122" viewBox="0 0 90 122" aria-label="${label}">
+              <rect x="24" y="62" width="42" height="46" rx="8" fill="#F8FCFF" stroke="#3B5B6B" stroke-width="3"/>
+              <rect x="27" y="68" width="36" height="37" rx="5" fill="${color}" opacity="0.72"/>
+              <rect x="30" y="56" width="30" height="6" rx="2.5" fill="#B58E5A" stroke="#5E3719" stroke-width="1.8"/>
             </svg>
             <span style="font-size:14px;font-weight:800;color:#243E4D;">${label}</span>
           </div>`;
         };
         html = `<div style="display:flex;gap:28px;align-items:flex-end;justify-content:center;">
-          ${renderJar(spec.leftLabel || "Jar A", spec.leftFill, "#66B2D6")}
-          ${renderJar(spec.rightLabel || "Jar B", spec.rightFill, "#5EA88A")}
+          ${renderContainer(spec.leftLabel || "Jar A", spec.leftFill, "#66B2D6")}
+          ${renderContainer(spec.rightLabel || "Jar B", spec.rightFill, "#5EA88A")}
         </div>`;
+        break;
+      }
+
+      case "left-right": {
+        const leftSVG = spec.leftShape
+          ? CPAPrimitives.renderShapeSVG(spec.leftShape, 56, false)
+          : CPAPrimitives.getItemSVG(spec.leftItem || "acorn", "primary", 52);
+        const rightSVG = spec.rightShape
+          ? CPAPrimitives.renderShapeSVG(spec.rightShape, 56, false)
+          : CPAPrimitives.getItemSVG(spec.rightItem || "berry", "primary", 52);
+        html = `<div style="display:flex;align-items:center;justify-content:center;gap:28px;background:#F6FAF3;padding:14px 24px;border-radius:14px;border:2px solid #9BB892;">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+            ${leftSVG}
+            ${spec.showSideLabels ? `<span style="font-size:12px;font-weight:800;color:#2E6F40;">← Left</span>` : ""}
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+            ${this.getPipTokenSVG(52)}
+            <span style="font-size:11px;font-weight:800;color:#6E4A2C;">Pip</span>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+            ${rightSVG}
+            ${spec.showSideLabels ? `<span style="font-size:12px;font-weight:800;color:#2E6F40;">Right →</span>` : ""}
+          </div>
+        </div>`;
+        break;
+      }
+
+      case "sort-count-groups": {
+        const cells = (spec.items || []).map((it) =>
+          `<div style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;">${CPAPrimitives.getItemSVG(it.itemType, it.variant || "primary", 36)}</div>`
+        ).join("");
+        html = `<div style="display:grid;grid-template-columns:repeat(4,46px);gap:6px;padding:12px 16px;background:#F6FAF3;border:2.5px solid #9BB892;border-radius:14px;">${cells}</div>`;
+        break;
+      }
+
+      case "scattered-group": {
+        const coords = [
+          [52, 42], [134, 34], [218, 48], [94, 88], [176, 92],
+          [258, 82], [46, 134], [136, 140], [224, 136], [282, 40]
+        ];
+        let icons = "";
+        const n = Math.max(0, Math.min(10, spec.count || 0));
+        for (let i = 0; i < n; i++) {
+          const [cx, cy] = coords[(i * 3 + (spec.seed || 0)) % coords.length];
+          icons += `<g transform="translate(${cx - 18}, ${cy - 18})">${CPAPrimitives.getItemSVG(spec.itemType || "acorn", spec.variant || "primary", 36)}</g>`;
+        }
+        html = `<svg width="320" height="170" viewBox="0 0 320 170" style="background:#F6FAF3;border:2.5px solid #9BB892;border-radius:14px;" role="img" aria-label="Garden patch with ${n} items">
+          <ellipse cx="160" cy="86" rx="136" ry="68" fill="#EBF4E5" stroke="#C5D8BC" stroke-width="2" stroke-dasharray="5,4"/>
+          ${icons}
+        </svg>`;
+        break;
+      }
+
+      case "picture-graph": {
+        const rows = (spec.rows || []).map((r) => {
+          let rowIcons = "";
+          for (let i = 0; i < r.count; i++) {
+            rowIcons += `<div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;border:1.5px solid #C7D8C0;border-radius:6px;background:#FFFFFF;">${CPAPrimitives.getItemSVG(r.itemType, r.variant || "primary", 28)}</div>`;
+          }
+          return `<div style="display:flex;align-items:center;gap:10px;">
+            <span style="width:78px;text-align:right;font-size:13px;font-weight:800;color:#2A4B30;">${r.label}</span>
+            <div style="display:flex;gap:4px;">${rowIcons}</div>
+          </div>`;
+        }).join("");
+        html = `<div style="display:flex;flex-direction:column;gap:8px;background:#F6FAF3;padding:12px 18px;border-radius:14px;border:2.5px solid #9BB892;">${rows}</div>`;
+        break;
+      }
+
+      case "number-compare": {
+        if (spec.mode === "order") {
+          const stones = (spec.stones || []).map((val) => {
+            const isQ = val === "?";
+            return `<div style="width:62px;height:62px;border-radius:12px;border:2.5px solid ${isQ ? "#D99B26" : "#2E6F40"};background:${isQ ? "#FFF3D1" : "#FFFFFF"};display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;color:${isQ ? "#B05E14" : "#233322"};">${val}</div>`;
+          }).join("");
+          html = `<div style="display:flex;gap:10px;align-items:center;justify-content:center;">${stones}</div>`;
+        } else if (spec.mode === "word") {
+          html = `<div style="padding:18px 34px;border-radius:14px;border:3px solid #2E6F40;background:#FFFDF7;font-size:32px;font-weight:800;color:#1F3D24;letter-spacing:0.03em;">“${spec.word}”</div>`;
+        } else {
+          html = `<div style="display:flex;align-items:center;gap:22px;">
+            <div style="width:82px;height:82px;border-radius:14px;border:3px solid #2E6F40;background:#F4F9F2;display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:800;color:#1E3F24;">${spec.numA}</div>
+            <span style="font-size:20px;font-weight:800;color:#7A6242;">or</span>
+            <div style="width:82px;height:82px;border-radius:14px;border:3px solid #A85B1C;background:#FFF8EB;display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:800;color:#6E3810;">${spec.numB}</div>
+          </div>`;
+        }
         break;
       }
 
@@ -349,7 +481,28 @@ const GardenVisuals = {
       }
 
       case "count-path": {
-        html = CPAPrimitives.renderNumberPathSVG(spec.start, spec.jump, spec.direction || "forward");
+        html = CPAPrimitives.renderNumberPathSVG(spec.start, spec.jump, spec.direction || "forward", {
+          revealEnd: !!spec.revealEnd
+        });
+        break;
+      }
+
+      case "story-scene": {
+        const makeBasket = (count, item, label) => {
+          let icons = "";
+          for (let i = 0; i < count; i++) {
+            icons += CPAPrimitives.getItemSVG(item, "primary", 28);
+          }
+          return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 14px;border:2.5px solid #9BB892;border-radius:14px;background:#F6FAF3;min-width:110px;">
+            <div style="display:flex;flex-wrap:wrap;gap:3px;max-width:155px;justify-content:center;">${icons}</div>
+            <span style="font-size:12px;font-weight:800;color:#2E6F40;">${label}</span>
+          </div>`;
+        };
+        html = `<div style="display:flex;align-items:center;gap:14px;justify-content:center;">
+          ${makeBasket(spec.countA, spec.itemA || "honeyjar", spec.labelA || "First")}
+          <div style="font-size:22px;font-weight:800;color:#8C5B12;">→</div>
+          ${makeBasket(spec.countB, spec.itemB || spec.itemA || "honeyjar", spec.labelB || "Story")}
+        </div>`;
         break;
       }
 
@@ -374,16 +527,61 @@ const GardenVisuals = {
         break;
       }
 
+      case "skip-count-5s": {
+        let bundles = "";
+        for (let g = 0; g < spec.groups; g++) {
+          bundles += `<div class="k-five-bundle" style="padding:7px 9px;border:2.5px solid #A85B1C;background:#FFF7E8;border-radius:12px;display:flex;flex-direction:column;align-items:center;gap:3px;">
+            <div style="display:flex;flex-wrap:wrap;gap:2px;width:44px;justify-content:center;">
+              ${Array(5).fill('<span style="width:12px;height:12px;border-radius:50%;background:#C43C48;border:1px solid #6E1C24;display:block;"></span>').join("")}
+            </div>
+            <span style="font-size:11px;font-weight:800;color:#7A3F10;">5</span>
+          </div>`;
+        }
+        html = `<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;max-width:460px;">${bundles}</div>`;
+        break;
+      }
+
+      case "daily-routine": {
+        const phase = spec.phase || "morning";
+        if (phase === "morning") {
+          html = `<svg width="240" height="136" viewBox="0 0 240 136" role="img" aria-label="Morning sunrise scene">
+            <rect width="240" height="136" rx="14" fill="#FDE8B4" stroke="#C99124" stroke-width="3"/>
+            <circle cx="120" cy="84" r="30" fill="#F4B23A"/>
+            <path d="M0 90 Q70 72 140 88 T240 82 L240 136 L0 136 Z" fill="#5D9955"/>
+            <text x="120" y="28" text-anchor="middle" font-size="14" font-weight="800" fill="#7A4810">SUNRISE · BREAKFAST</text>
+          </svg>`;
+        } else if (phase === "afternoon") {
+          html = `<svg width="240" height="136" viewBox="0 0 240 136" role="img" aria-label="Afternoon sunny sky">
+            <rect width="240" height="136" rx="14" fill="#CBEAF8" stroke="#4D809E" stroke-width="3"/>
+            <circle cx="176" cy="44" r="22" fill="#F4C844"/>
+            <path d="M0 98 Q80 82 160 96 T240 90 L240 136 L0 136 Z" fill="#4D8B4F"/>
+            <text x="92" y="34" text-anchor="middle" font-size="14" font-weight="800" fill="#23485E">MIDDAY SUN · PLAY</text>
+          </svg>`;
+        } else {
+          html = `<svg width="240" height="136" viewBox="0 0 240 136" role="img" aria-label="Night sky with moon and stars">
+            <rect width="240" height="136" rx="14" fill="#20324D" stroke="#8F6E2E" stroke-width="3"/>
+            <circle cx="178" cy="44" r="18" fill="#F8E7A2"/>
+            <circle cx="185" cy="39" r="15" fill="#20324D"/>
+            <circle cx="52" cy="34" r="2.8" fill="#FFF6C4"/><circle cx="94" cy="24" r="2.4" fill="#FFF6C4"/><circle cx="136" cy="52" r="2.6" fill="#FFF6C4"/>
+            <path d="M0 100 Q80 88 160 98 T240 92 L240 136 L0 136 Z" fill="#1F3E28"/>
+            <text x="96" y="74" text-anchor="middle" font-size="14" font-weight="800" fill="#F8E7A2">MOON &amp; BEDTIME</text>
+          </svg>`;
+        }
+        break;
+      }
+
       case "clock-hour": {
         const badge = spec.skyPhase
-          ? `<div style="font-size:13px;font-weight:800;color:#2E6F40;background:#EDF6EA;padding:4px 12px;border-radius:999px;border:1.5px solid #9CB894;">${spec.skyPhase}</div>`
+          ? `<div style="font-size:11.5px;font-weight:800;letter-spacing:0.04em;text-transform:uppercase;color:#2E6F40;background:#EDF6EA;padding:4px 12px;border-radius:6px;border:1.5px solid #9CB894;">${spec.skyPhase}</div>`
           : "";
         html = `<div style="display:flex;flex-direction:column;align-items:center;gap:8px;">${badge}${CPAPrimitives.renderClockHTML(spec.hour, spec.minutes || 0)}</div>`;
         break;
       }
 
       case "coins": {
-        html = CPAPrimitives.renderCoinsHTML(spec.coins || [1]);
+        html = CPAPrimitives.renderCoinsHTML(spec.coins || [1], {
+          showLabels: spec.showLabels !== false
+        });
         break;
       }
 
